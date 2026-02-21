@@ -1,0 +1,8 @@
+{
+  "name": "Attendance_module V1_mock data",
+  "description": "A high-security attendance module with biometric face capture, geofencing, and advanced fraud detection for enterprise environments.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
