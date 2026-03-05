@@ -9,5 +9,6 @@ __all__ = [
     "shifts",
     "requests",
     "holidays",
-    "reports"
+    "reports",
+    "google_drive_proxy"
 ]

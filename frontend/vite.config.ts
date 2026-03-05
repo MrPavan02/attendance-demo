@@ -12,8 +12,15 @@ export default defineConfig(({ mode }) => {
     return {
       server: {
         port: 3000,
-        host: '127.0.0.1',
-        strictPort: false, // Allow fallback to next available port if 3000 is in use
+        host: 'localhost',
+        strictPort: true, // Only use port 3000, don't fallback
+        proxy: {
+          '/api': {
+            target: 'http://localhost:8000',
+            changeOrigin: true,
+            secure: false,
+          }
+        }
       },
       plugins: [react()],
       define: {

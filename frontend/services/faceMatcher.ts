@@ -1,25 +1,23 @@
-import * as faceapi from 'face-api.js';
+import * as faceapi from '@vladmandic/face-api';
 
 let modelsLoaded = false;
 let modelsLoadingError: string | null = null;
-const MODEL_PATHS = {
-  ssdMobilenet: '/face-api/ssd_mobilenetv1',
-  faceLandmark68: '/face-api/face_landmark_68',
-  faceRecognition: '/face-api/face_recognition'
-};
+
+// Models hosted locally in public/models folder
+const MODEL_PATH = '/models';
 
 const loadModels = async () => {
   if (modelsLoaded) return;
   if (modelsLoadingError) throw new Error(`Models already failed to load: ${modelsLoadingError}`);
   
   try {
-    console.log('[Face-API] Loading models from', MODEL_PATHS);
+    console.log('[Face-API] Loading models from local path:', MODEL_PATH);
     await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_PATHS.ssdMobilenet),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATHS.faceLandmark68),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATHS.faceRecognition),
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_PATH),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATH),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH),
     ]);
-    console.log('[Face-API] Models loaded successfully');
+    console.log('[Face-API] Models loaded successfully from local storage');
     modelsLoaded = true;
   } catch (error) {
     modelsLoadingError = String(error);
@@ -53,7 +51,7 @@ const descriptorFromImage = async (src: string): Promise<Float32Array | null> =>
 export const compareFaces = async (
   capturedDataUrl: string,
   enrolledImageUrl: string,
-  threshold = 0.5  // More lenient threshold (was 0.6)
+  threshold = 0.5  // Standard threshold for face-api.js
 ): Promise<{ ok: boolean; distance?: number; reason?: string }> => {
   try {
     console.log('[Face-Verification] Starting verification process...');

@@ -29,12 +29,13 @@ const App: React.FC = () => {
   const [entries, setEntries] = useState<AttendanceEntry[]>([]);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [pendingCaptureData, setPendingCaptureData] = useState<{ image: string } | null>(null);
+  const [pendingLoginData, setPendingLoginData] = useState<any>(null);
+  const [verificationContext, setVerificationContext] = useState<'login' | 'attendance'>('attendance');
 
   const [showRegularizationModal, setShowRegularizationModal] = useState(false);
   const [showShiftChangeModal, setShowShiftChangeModal] = useState(false);
   const [showOvertimeModal, setShowOvertimeModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
     const allEntries = attendanceService.getEntries();
@@ -143,11 +144,15 @@ const App: React.FC = () => {
 
       const remoteEntries = await attendanceService.fetchEntriesFromApi();
 
-      setSession(newSession);
-      setEntries(remoteEntries);
-      localStorage.setItem('secur_corp_attendance_ledger', JSON.stringify(remoteEntries));
-      localStorage.setItem('secur_corp_session', JSON.stringify(newSession));
-      setFeedback({ type: 'success', message: 'Authenticated', detail: 'Connected to backend' });
+      // Store pending login data and show verification modal
+      setPendingLoginData({
+        session: newSession,
+        entries: remoteEntries
+      });
+      setVerificationContext('login');
+      setFeedback(null); // Clear any previous errors before showing verification modal
+      setIsVerificationModalOpen(true);
+      setIsProcessing(false);
     } catch (err: any) {
       let detail = err?.message || 'Authentication failed. Please try again.';
       
@@ -192,8 +197,30 @@ const App: React.FC = () => {
 
   const initiateAttendance = (capturedImage: string) => {
     setPendingCaptureData({ image: capturedImage });
+    setVerificationContext('attendance');
     setIsVerificationModalOpen(true);
   };
+
+  const completeLogin = useCallback(async (method: VerificationMethod) => {
+    if (!pendingLoginData) return;
+    
+    setIsVerificationModalOpen(false);
+    setIsProcessing(true);
+
+    try {
+      // Complete the login with session data
+      setSession(pendingLoginData.session);
+      setEntries(pendingLoginData.entries);
+      localStorage.setItem('secur_corp_attendance_ledger', JSON.stringify(pendingLoginData.entries));
+      localStorage.setItem('secur_corp_session', JSON.stringify(pendingLoginData.session));
+      setFeedback({ type: 'success', message: 'Login Successful', detail: `Verified with Windows Hello` });
+      setPendingLoginData(null);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Login Failed', detail: err.message || 'Failed to complete login' });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [pendingLoginData]);
 
   const finalizeAttendance = useCallback(async (method: VerificationMethod) => {
     if (!session || !pendingCaptureData) return;
@@ -331,12 +358,6 @@ const App: React.FC = () => {
     }
   }, [session, workMode, fieldReason, entries, pendingCaptureData]);
 
-  const handleCalendarClick = (dateStr: string) => {
-    const clickedDate = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (clickedDate < today) setShowRegularizationModal(true);
-  };
   const lastCheckIn = session ? attendanceService.getLastCheckIn(session.employeeId) : undefined;
   const empWeekOffs = session ? attendanceService.getEmployeeWeekOffDays(session.employeeId) : [];
 
@@ -394,6 +415,17 @@ const App: React.FC = () => {
   if (!session) {
     return (
       <Layout user={null} onLogout={() => {}}>
+        <VerificationModal
+          isOpen={isVerificationModalOpen}
+          onVerified={completeLogin}
+          onCancel={() => { 
+            setIsVerificationModalOpen(false); 
+            setPendingLoginData(null);
+            setIsProcessing(false);
+          }}
+          actionLabel="Login"
+          employeeId={pendingLoginData?.session?.employeeId}
+        />
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] animate-in fade-in zoom-in-95 duration-700">
           <div className="max-w-4xl w-full p-6">
             <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-[#9BA4B4] flex flex-col md:flex-row">
@@ -469,7 +501,7 @@ const App: React.FC = () => {
                         />
                       </div>
                     </div>
-                    {feedback && !session && (
+                    {feedback && !session && !isVerificationModalOpen && (
                       <div className="p-3 rounded-xl border-l-4 border-rose-500 bg-rose-50 animate-in slide-in-from-top-2">
                         <div className="flex items-start space-x-3">
                           <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -504,12 +536,20 @@ const App: React.FC = () => {
       {session.role === UserRole.HR ? (
         <HRDashboard />
       ) : (
-        <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
+        <div className="max-w-full mx-auto px-4 space-y-6 animate-in fade-in duration-500">
           <VerificationModal
             isOpen={isVerificationModalOpen}
-            onVerified={finalizeAttendance}
-            onCancel={() => { setIsVerificationModalOpen(false); setPendingCaptureData(null); }}
-            actionLabel={session.currentStatus === AttendanceStatus.CHECKED_IN ? 'Logout' : 'Login'}
+            onVerified={verificationContext === 'login' ? completeLogin : finalizeAttendance}
+            onCancel={() => { 
+              setIsVerificationModalOpen(false); 
+              setPendingCaptureData(null);
+              if (verificationContext === 'login') {
+                setPendingLoginData(null);
+                setIsProcessing(false);
+              }
+            }}
+            actionLabel={verificationContext === 'login' ? 'Login' : (session.currentStatus === AttendanceStatus.CHECKED_IN ? 'Logout' : 'Login')}
+            employeeId={verificationContext === 'login' ? pendingLoginData?.session?.employeeId : session.employeeId}
           />
           
           <div className="lg:flex h-full gap-6">
@@ -550,6 +590,21 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {feedback && feedback.type !== 'error' && (
+                <div className={`p-4 rounded-2xl border-l-8 flex items-center space-x-4 shadow-lg animate-in slide-in-from-top-4 ${feedback.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' : 'bg-rose-50 border-rose-500 text-rose-900'}`}>
+                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${feedback.type === 'success' ? 'bg-emerald-200' : 'bg-rose-200'}`}>
+                      <i className={`fas ${feedback.type === 'success' ? 'fa-check' : 'fa-exclamation'}`}></i>
+                   </div>
+                   <div className="flex-1">
+                      <span className="text-xs font-black uppercase tracking-widest block">{feedback.message}</span>
+                      <span className="text-[10px] font-bold opacity-75">{feedback.detail}</span>
+                   </div>
+                   <button onClick={() => setFeedback(null)} className="opacity-40 hover:opacity-100 transition-opacity">
+                      <i className="fas fa-times"></i>
+                   </button>
+                </div>
+              )}
 
               <div className="bg-white rounded-3xl p-3 border border-[#9BA4B4] shadow-sm flex items-center justify-between">
                  <div className="flex items-center space-x-4">
@@ -629,148 +684,18 @@ const App: React.FC = () => {
             </div>
 
             <div className="lg:w-2/3 flex flex-col h-full space-y-6">
-                {feedback && feedback.type !== 'error' && (
-                  <div className={`p-4 rounded-2xl border-l-8 flex items-center space-x-4 shadow-lg animate-in slide-in-from-top-4 ${feedback.type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' : 'bg-rose-50 border-rose-500 text-rose-900'}`}>
-                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${feedback.type === 'success' ? 'bg-emerald-200' : 'bg-rose-200'}`}>
-                        <i className={`fas ${feedback.type === 'success' ? 'fa-check' : 'fa-exclamation'}`}></i>
-                     </div>
-                     <div className="flex-1">
-                        <span className="text-xs font-black uppercase tracking-widest block">{feedback.message}</span>
-                        <span className="text-[10px] font-bold opacity-75">{feedback.detail}</span>
-                     </div>
-                     <button onClick={() => setFeedback(null)} className="opacity-40 hover:opacity-100 transition-opacity">
-                        <i className="fas fa-times"></i>
-                     </button>
-                  </div>
-                )}
-
-                <div className="bg-white rounded-[2.5rem] border border-[#9BA4B4] shadow-sm flex flex-col flex-grow overflow-hidden">
-                  <div className="p-4 border-b border-[#F1F6F9] flex items-center justify-between bg-[#F8FAFC]">
-                     <h3 className="font-black text-[#14274E] text-[10px] uppercase tracking-[0.3em]">
-                       <i className="far fa-calendar-alt mr-3 text-[#9BA4B4]"></i> Attendance Register
-                     </h3>
-                     <div className="flex bg-white shadow-sm border border-slate-200 rounded-2xl p-1.5 space-x-1">
-                        <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-50 text-[#394867] transition-all"><i className="fas fa-chevron-left text-[10px]"></i></button>
-                        <span className="px-5 flex items-center text-[11px] font-black text-[#14274E] uppercase tracking-widest min-w-[140px] justify-center">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
-                        <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-50 text-[#394867] transition-all"><i className="fas fa-chevron-right text-[10px]"></i></button>
-                     </div>
-                  </div>
-
-                  <div className="flex-grow p-4 overflow-auto">
-                     <div className="grid grid-cols-7 mb-4">
-                        {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
-                           <div key={d} className="text-[9px] font-black text-[#9BA4B4] text-center uppercase tracking-[0.2em] py-2">{d}</div>
-                        ))}
-                     </div>
-
-                     <div className="grid grid-cols-7 gap-2 auto-rows-fr">
-                        {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => <div key={`empty-${i}`} className="opacity-0 pointer-events-none" />)}
-                        
-                        {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
-                           const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
-                           const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-                           const dateStr = offsetDate.toISOString().split('T')[0];
-                           
-                           const dayEntries = entries.filter(
-                             e => e.employeeId === session.employeeId && e.timestamp.startsWith(dateStr)
-                           );
-                           const checkIn = dayEntries.find(e => e.type === 'IN');
-                           const checkOut = [...dayEntries].reverse().find(e => e.type === 'OUT');
-                           
-                           let totalHours = 0;
-                           if (checkIn && checkOut && checkOut.duration) {
-                               totalHours = Math.round(checkOut.duration * 10) / 10;
-                           }
-
-                           const today = new Date();
-                           const isToday = date.getDate() === today.getDate() && 
-                                           date.getMonth() === today.getMonth() && 
-                                           date.getFullYear() === today.getFullYear();
-                           
-                           const isFuture = date > today && !isToday;
-                           const isWeekOff = empWeekOffs.includes(date.getDay()); 
-                           const isWorkingHoursOver = today.getHours() >= 18; 
-
-                           let bgClass = "bg-white"; 
-                           let borderClass = "border-slate-100";
-                           let textClass = "text-[#394867]";
-                           let statusElement = null;
-
-                           // Re-ordered logic: Work > Week Off > Today > Absence
-                           if (dayEntries.length > 0) {
-                               bgClass = "bg-emerald-50"; borderClass = "border-emerald-100"; textClass = "text-emerald-700";
-                           } else if (isWeekOff) {
-                               bgClass = "bg-slate-50"; borderClass = "border-slate-100"; textClass = "text-slate-400";
-                               statusElement = <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Week Off</span>;
-                           } else if (isToday) {
-                               if (isWorkingHoursOver) {
-                                   bgClass = "bg-rose-50"; borderClass = "border-rose-100"; textClass = "text-rose-700";
-                                   statusElement = <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absent</span>;
-                               } else {
-                                   bgClass = "bg-[#14274E]"; borderClass = "border-[#14274E]"; textClass = "text-white";
-                                   statusElement = <span className="text-[8px] font-black text-white/40 uppercase tracking-tighter">Current</span>;
-                               }
-                           } else if (!isFuture) {
-                               bgClass = "bg-rose-50"; borderClass = "border-rose-100"; textClass = "text-rose-700";
-                               statusElement = <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absence</span>;
-                           }
-
-                           return (
-                               <div 
-                                   key={i} 
-                                   onClick={() => !isFuture && handleCalendarClick(dateStr)}
-                                   className={`min-h-[64px] border-2 rounded-2xl p-2 flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-95 ${bgClass} ${borderClass}`}
-                               >
-                                  <div className="flex justify-between items-start">
-                                     <span className={`text-[11px] font-black ${textClass}`}>{i + 1}</span>
-                                     {!isFuture && !isToday && dayEntries.length === 0 && !isWeekOff && (
-                                        <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center animate-pulse">
-                                          <i className="fas fa-clock-rotate-left text-[9px]"></i>
-                                        </div>
-                                     )}
-                                     {dayEntries.length > 0 && <i className="fas fa-check-circle text-[9px] text-emerald-500"></i>}
-                                  </div>
-                                  
-                                  {dayEntries.length > 0 ? (
-                                      <div className="space-y-1 mt-1">
-                                         <div className="flex justify-between items-center text-[8px] font-black opacity-60">
-                                            <span>IN</span>
-                                            <span>{new Date(checkIn?.timestamp!).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!1})}</span>
-                                         </div>
-                                         <div className="flex justify-between items-center text-[8px] font-black opacity-60">
-                                            <span>OUT</span>
-                                            <span>{checkOut ? new Date(checkOut.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!1}) : '--:--'}</span>
-                                         </div>
-                                         {totalHours > 0 && (
-                                            <div className="pt-1 mt-1 border-t border-black/5 flex justify-between items-center">
-                                               <span className="text-[7px] font-black uppercase text-[#9BA4B4]">Span</span>
-                                               <span className="text-[9px] font-black text-emerald-700">{totalHours}h</span>
-                                            </div>
-                                         )}
-                                      </div>
-                                  ) : (
-                                      <div className="flex items-center justify-center h-full">
-                                          {statusElement}
-                                      </div>
-                                  )}
-                               </div>
-                           );
-                        })}
-                     </div>
-                  </div>
-                </div>
+                <AttendanceDashboard 
+                  entries={entries.filter(e => e.employeeId === session.employeeId)} 
+                  status={session.currentStatus} 
+                  lastCheckIn={attendanceService.getLastCheckIn(session.employeeId)}
+                  employeeId={session.employeeId}
+                  workMode={workMode} 
+                  setWorkMode={setWorkMode}
+                  empWeekOffs={empWeekOffs}
+                />
             </div>
           </div>
           
-          <AttendanceDashboard 
-            entries={entries.filter(e => e.employeeId === session.employeeId)} 
-            status={session.currentStatus} 
-            lastCheckIn={attendanceService.getLastCheckIn(session.employeeId)}
-            employeeId={session.employeeId}
-            workMode={workMode} 
-            setWorkMode={setWorkMode}
-          />
-
           <RegularizationModal 
             isOpen={showRegularizationModal} 
             onClose={() => setShowRegularizationModal(false)} 

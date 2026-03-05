@@ -14,6 +14,7 @@ interface DashboardProps {
   employeeId: string;
   workMode: WorkMode;
   setWorkMode: (mode: WorkMode) => void;
+  empWeekOffs?: number[];
 }
 
 const AttendanceDashboard: React.FC<DashboardProps> = ({ 
@@ -22,16 +23,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
   lastCheckIn, 
   employeeId,
   workMode,
-  setWorkMode 
+  setWorkMode,
+  empWeekOffs = []
+ 
 }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showRegularizationModal, setShowRegularizationModal] = useState(false);
   const [showShiftChangeModal, setShowShiftChangeModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   
-  const [activeMainTab, setActiveMainTab] = useState<'dashboard' | 'settings' | 'holidays' | 'teamApprovals' | 'applyOnBehalf' | 'reports'>('dashboard');
+  const [activeMainTab, setActiveMainTab] = useState<'dashboard' | 'attendanceRegister' | 'settings' | 'holidays' | 'teamApprovals' | 'applyOnBehalf' | 'reports'>('dashboard');
   const [activeReqTab, setActiveReqTab] = useState<'regularization' | 'shift' | 'overtime' | 'permission'>('regularization');
   const [activeTeamApprovalTab, setActiveTeamApprovalTab] = useState<'regularization' | 'shift' | 'overtime' | 'permission'>('regularization');
+  const [activeApprovalReviewTab, setActiveApprovalReviewTab] = useState<'regularization' | 'shift' | 'overtime' | 'permission'>('regularization');
+  const [activeStatisticsView, setActiveStatisticsView] = useState<'monthly' | 'ytd'>('monthly');
 
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [summaryMonth, setSummaryMonth] = useState<string>(new Date().toISOString().substring(0, 7)); 
@@ -1010,34 +1015,75 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
   }, []);
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-      <div className="flex justify-between items-center shrink-0">
-        <div className="text-sm font-bold text-[#14274E] uppercase tracking-widest">My Attendance</div>
+    <div className="py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="text-lg font-bold text-[#14274E] uppercase tracking-widest">My Attendance</div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        <button onClick={() => setActiveMainTab('dashboard')} className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'dashboard' ? 'bg-[#14274E] text-white shadow-lg' : 'bg-white text-[#9BA4B4] border border-[#9BA4B4] hover:bg-[#F1F6F9]'}`}>Dashboard</button>
-        <button onClick={() => setActiveMainTab('settings')} className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'settings' ? 'bg-[#14274E] text-white shadow-lg' : 'bg-white text-[#9BA4B4] border border-[#9BA4B4] hover:bg-[#F1F6F9]'}`}>Environment</button>
-        <button onClick={() => setActiveMainTab('holidays')} className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'holidays' ? 'bg-[#14274E] text-white shadow-lg' : 'bg-white text-[#9BA4B4] border border-[#9BA4B4] hover:bg-[#F1F6F9]'}`}>Holidays</button>
-        <button onClick={() => setActiveMainTab('teamApprovals')} className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'teamApprovals' ? 'bg-[#14274E] text-white shadow-lg' : 'bg-white text-[#9BA4B4] border border-[#9BA4B4] hover:bg-[#F1F6F9]'}`}>Team Approvals</button>
-        <button onClick={() => setActiveMainTab('applyOnBehalf')} className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'applyOnBehalf' ? 'bg-[#14274E] text-white shadow-lg' : 'bg-white text-[#9BA4B4] border border-[#9BA4B4] hover:bg-[#F1F6F9]'}`}>Apply on behalf</button>
-        <button onClick={() => setActiveMainTab('reports')} className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'reports' ? 'bg-[#14274E] text-white shadow-lg' : 'bg-white text-[#9BA4B4] border border-[#9BA4B4] hover:bg-[#F1F6F9]'}`}>Reports</button>
+      <div className="flex flex-wrap gap-3 mb-8 bg-white p-4 rounded-2xl border border-[#9BA4B4] shadow-sm">
+        <button onClick={() => setActiveMainTab('dashboard')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'dashboard' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Dashboard</button>
+        <button onClick={() => setActiveMainTab('attendanceRegister')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'attendanceRegister' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Attendance Register</button>
+        <button onClick={() => setActiveMainTab('settings')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'settings' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Environment</button>
+        <button onClick={() => setActiveMainTab('holidays')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'holidays' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Holidays</button>
+        <button onClick={() => setActiveMainTab('teamApprovals')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'teamApprovals' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Team Approvals</button>
+        <button onClick={() => setActiveMainTab('applyOnBehalf')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'applyOnBehalf' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Apply on behalf</button>
+        <button onClick={() => setActiveMainTab('reports')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'reports' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Reports</button>
       </div>
 
       {activeMainTab === 'dashboard' && (
-        <div className="space-y-6 animate-in fade-in">
+        <div className="space-y-6 animate-in fade-in pb-6">
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white p-3.5 rounded-2xl border border-[#9BA4B4] shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-[#14274E] uppercase tracking-widest text-xs">
-                        <i className="fas fa-chart-pie mr-2 text-[#9BA4B4]"></i> Monthly Statistics
-                    </h3>
-                    <input type="month" value={summaryMonth} onChange={e => setSummaryMonth(e.target.value)} className="text-[10px] font-bold text-[#14274E] bg-[#F1F6F9] px-2 py-1 rounded-lg border border-[#9BA4B4] outline-none" />
-                </div>
+          <div className="bg-white p-6 rounded-2xl border border-[#9BA4B4] shadow-sm">
+            {/* Switch and Date Picker Row */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#E5E7EB]">
+              <div className="flex gap-2 bg-[#F1F6F9] p-1 rounded-lg border border-[#9BA4B4]">
+                <button
+                  onClick={() => setActiveStatisticsView('monthly')}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    activeStatisticsView === 'monthly'
+                      ? 'bg-[#14274E] text-white shadow-md'
+                      : 'bg-transparent text-[#9BA4B4] hover:text-[#14274E]'
+                  }`}
+                >
+                  <i className="fas fa-calendar mr-2"></i> Monthly
+                </button>
+                <button
+                  onClick={() => setActiveStatisticsView('ytd')}
+                  className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    activeStatisticsView === 'ytd'
+                      ? 'bg-[#14274E] text-white shadow-md'
+                      : 'bg-transparent text-[#9BA4B4] hover:text-[#14274E]'
+                  }`}
+                >
+                  <i className="fas fa-chart-line mr-2"></i> YTD
+                </button>
+              </div>
 
+              {activeStatisticsView === 'monthly' ? (
+                <input 
+                  type="month" 
+                  value={summaryMonth} 
+                  onChange={e => setSummaryMonth(e.target.value)} 
+                  className="text-[10px] font-bold text-[#14274E] bg-[#F1F6F9] px-3 py-2 rounded-lg border border-[#9BA4B4] outline-none" 
+                />
+              ) : (
+                <select 
+                  value={summaryYear} 
+                  onChange={e => setSummaryYear(e.target.value)} 
+                  className="text-[10px] font-bold text-[#14274E] bg-[#F1F6F9] px-3 py-2 rounded-lg border border-[#9BA4B4] outline-none"
+                >
+                  {reportYearOptions.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Statistics Content */}
+            {activeStatisticsView === 'monthly' && (
+              <>
                 {monthlySummary ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex flex-col items-center justify-center">
                     <i className="fas fa-calendar-check text-emerald-600 mb-1"></i>
                     <p className="text-lg font-black text-emerald-700">{monthlySummary.present}</p>
@@ -1086,7 +1132,7 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                     <p className="text-[8px] font-black text-red-700 uppercase tracking-widest mt-0.5">Absent</p>
                   </div>
 
-                  <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-col items-center justify-center lg:col-span-2">
+                  <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-col items-center justify-center">
                     <i className="fas fa-business-time text-slate-600 mb-1"></i>
                     <p className="text-lg font-black text-slate-700">{monthlySummary.totalHours}h</p>
                     <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-0.5">Total Hours</p>
@@ -1098,80 +1144,66 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                   <p className="text-xs font-bold text-[#394867]">Aggregating summary data...</p>
                 </div>
               )}
-            </div>
+              </>
+            )}
 
-            <div className="bg-white p-3.5 rounded-2xl border border-[#9BA4B4] shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-[#14274E] uppercase tracking-widest text-xs">
-                        <i className="fas fa-chart-line mr-2 text-[#9BA4B4]"></i> YTD Statistics
-                    </h3>
-                    <select 
-                      value={summaryYear} 
-                      onChange={e => setSummaryYear(e.target.value)} 
-                      className="text-[10px] font-bold text-[#14274E] bg-[#F1F6F9] px-2 py-1 rounded-lg border border-[#9BA4B4] outline-none"
-                    >
-                      {reportYearOptions.map(year => (
-                          <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
+            {activeStatisticsView === 'ytd' && (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-calendar-check text-emerald-600 mb-1"></i>
+                  <p className="text-lg font-black text-emerald-700">{ytdSummary.present}</p>
+                  <p className="text-[8px] font-black text-emerald-700 uppercase tracking-widest mt-0.5">Present</p>
+                </div>
+                
+                <div className="bg-blue-50 p-2.5 rounded-xl border border-blue-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-calendar-minus text-blue-600 mb-1"></i>
+                  <p className="text-lg font-black text-blue-700">{ytdSummary.weekOffs}</p>
+                  <p className="text-[8px] font-black text-blue-700 uppercase tracking-widest mt-0.5">Week-off</p>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                  <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-calendar-check text-emerald-600 mb-1"></i>
-                    <p className="text-lg font-black text-emerald-700">{ytdSummary.present}</p>
-                    <p className="text-[8px] font-black text-emerald-700 uppercase tracking-widest mt-0.5">YTD Present</p>
-                  </div>
-                  
-                  <div className="bg-blue-50 p-2.5 rounded-xl border border-blue-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-calendar-minus text-blue-600 mb-1"></i>
-                    <p className="text-lg font-black text-blue-700">{ytdSummary.weekOffs}</p>
-                    <p className="text-[8px] font-black text-blue-700 uppercase tracking-widest mt-0.5">YTD Week-off</p>
-                  </div>
-
-                  <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-calendar-star text-amber-600 mb-1"></i>
-                    <p className="text-lg font-black text-amber-700">{ytdSummary.holidays}</p>
-                    <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest mt-0.5">YTD Holidays</p>
-                  </div>
-
-                  <div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-file-medical text-purple-600 mb-1"></i>
-                    <p className="text-lg font-black text-purple-700">{ytdSummary.leaves}</p>
-                    <p className="text-[8px] font-black text-purple-700 uppercase tracking-widest mt-0.5">YTD Leaves</p>
-                  </div>
-
-                  <div className="bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-clock-arrow-down text-rose-600 mb-1"></i>
-                    <p className="text-lg font-black text-rose-700">{ytdSummary.late}</p>
-                    <p className="text-[8px] font-black text-rose-700 uppercase tracking-widest mt-0.5 text-center">YTD Late In</p>
-                  </div>
-
-                  <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-stopwatch text-indigo-600 mb-1"></i>
-                    <p className="text-lg font-black text-indigo-700">{ytdSummary.otHours}h</p>
-                    <p className="text-[8px] font-black text-indigo-700 uppercase tracking-widest mt-0.5">YTD OT Hours</p>
-                  </div>
-
-                  <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-clock-arrow-up text-amber-600 mb-1"></i>
-                    <p className="text-lg font-black text-amber-700">{ytdSummary.earlyGoing}</p>
-                    <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest mt-0.5">YTD Early Go</p>
-                  </div>
-
-                  <div className="bg-red-50 p-2.5 rounded-xl border border-red-200 flex flex-col items-center justify-center">
-                    <i className="fas fa-user-xmark text-red-600 mb-1"></i>
-                    <p className="text-lg font-black text-red-700">{ytdSummary.absent}</p>
-                    <p className="text-[8px] font-black text-red-700 uppercase tracking-widest mt-0.5">YTD Absent</p>
-                  </div>
-
-                  <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-col items-center justify-center lg:col-span-2">
-                    <i className="fas fa-business-time text-slate-600 mb-1"></i>
-                    <p className="text-lg font-black text-slate-700">{ytdSummary.totalHours}h</p>
-                    <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-0.5">YTD Total Hours</p>
-                  </div>
+                <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-calendar-star text-amber-600 mb-1"></i>
+                  <p className="text-lg font-black text-amber-700">{ytdSummary.holidays}</p>
+                  <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest mt-0.5">Holidays</p>
                 </div>
-            </div>
+
+                <div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-file-medical text-purple-600 mb-1"></i>
+                  <p className="text-lg font-black text-purple-700">{ytdSummary.leaves}</p>
+                  <p className="text-[8px] font-black text-purple-700 uppercase tracking-widest mt-0.5">Leaves</p>
+                </div>
+
+                <div className="bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-clock-arrow-down text-rose-600 mb-1"></i>
+                  <p className="text-lg font-black text-rose-700">{ytdSummary.late}</p>
+                  <p className="text-[8px] font-black text-rose-700 uppercase tracking-widest mt-0.5 text-center">Late In</p>
+                </div>
+
+                <div className="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-stopwatch text-indigo-600 mb-1"></i>
+                  <p className="text-lg font-black text-indigo-700">{ytdSummary.otHours}h</p>
+                  <p className="text-[8px] font-black text-indigo-700 uppercase tracking-widest mt-0.5">OT Hours</p>
+                </div>
+
+                <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-clock-arrow-up text-amber-600 mb-1"></i>
+                  <p className="text-lg font-black text-amber-700">{ytdSummary.earlyGoing}</p>
+                  <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest mt-0.5">Early Go</p>
+                </div>
+
+                <div className="bg-red-50 p-2.5 rounded-xl border border-red-200 flex flex-col items-center justify-center">
+                  <i className="fas fa-user-xmark text-red-600 mb-1"></i>
+                  <p className="text-lg font-black text-red-700">{ytdSummary.absent}</p>
+                  <p className="text-[8px] font-black text-red-700 uppercase tracking-widest mt-0.5">Absent</p>
+                </div>
+
+                <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-col items-center justify-center">
+                  <i className="fas fa-business-time text-slate-600 mb-1"></i>
+                  <p className="text-lg font-black text-slate-700">{ytdSummary.totalHours}h</p>
+                  <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-0.5">Total Hours</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-3xl border border-[#9BA4B4] shadow-sm overflow-hidden">
@@ -1337,9 +1369,127 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       </div>
       )}
 
+      {activeMainTab === 'attendanceRegister' && (
+        <div className="bg-white rounded-2xl border border-[#9BA4B4] shadow-sm overflow-hidden" style={{maxHeight: 'calc(100vh - 300px)'}}>
+          <div className="px-6 py-4 border-b border-[#F1F6F9] flex items-center justify-between bg-[#F8FAFC]">
+            <h3 className="font-black text-[#14274E] text-[10px] uppercase tracking-[0.3em]">
+              <i className="far fa-calendar-alt mr-3 text-[#9BA4B4]"></i> Attendance Register
+            </h3>
+            <div className="flex bg-white shadow-sm border border-slate-200 rounded-2xl p-1.5 space-x-1">
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-50 text-[#394867] transition-all"><i className="fas fa-chevron-left text-[10px]"></i></button>
+              <span className="px-5 flex items-center text-[11px] font-black text-[#14274E] uppercase tracking-widest min-w-[140px] justify-center">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-50 text-[#394867] transition-all"><i className="fas fa-chevron-right text-[10px]"></i></button>
+            </div>
+          </div>
+
+          <div className="p-6 overflow-auto" style={{maxHeight: 'calc(100vh - 360px)'}}>
+            <div className="grid grid-cols-7 mb-3">
+              {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
+                <div key={d} className="text-[9px] font-black text-[#9BA4B4] text-center uppercase tracking-[0.2em] py-2">{d}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-2 auto-rows-fr">
+              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => <div key={`empty-${i}`} className="opacity-0 pointer-events-none" />)}
+              
+              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
+                const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+                const dateStr = offsetDate.toISOString().split('T')[0];
+                
+                const dayEntries = entries.filter(
+                  e => e.employeeId === employeeId && e.timestamp.startsWith(dateStr)
+                );
+                const checkIn = dayEntries.find(e => e.type === 'IN');
+                const checkOut = [...dayEntries].reverse().find(e => e.type === 'OUT');
+                
+                let totalHours = 0;
+                if (checkIn && checkOut && checkOut.duration) {
+                  totalHours = Math.round(checkOut.duration * 10) / 10;
+                }
+
+                const today = new Date();
+                const isToday = date.getDate() === today.getDate() && 
+                                date.getMonth() === today.getMonth() && 
+                                date.getFullYear() === today.getFullYear();
+                
+                const isFuture = date > today && !isToday;
+                const isWeekOff = empWeekOffs.includes(date.getDay()); 
+                const isWorkingHoursOver = today.getHours() >= 18; 
+
+                let bgClass = "bg-white"; 
+                let borderClass = "border-slate-100";
+                let textClass = "text-[#394867]";
+                let statusElement = null;
+
+                // Re-ordered logic: Work > Week Off > Today > Absence
+                if (dayEntries.length > 0) {
+                  bgClass = "bg-emerald-50"; borderClass = "border-emerald-100"; textClass = "text-emerald-700";
+                } else if (isWeekOff) {
+                  bgClass = "bg-slate-50"; borderClass = "border-slate-100"; textClass = "text-slate-400";
+                  statusElement = <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Week Off</span>;
+                } else if (isToday) {
+                  if (isWorkingHoursOver) {
+                    bgClass = "bg-rose-50"; borderClass = "border-rose-100"; textClass = "text-rose-700";
+                    statusElement = <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absent</span>;
+                  } else {
+                    bgClass = "bg-[#14274E]"; borderClass = "border-[#14274E]"; textClass = "text-white";
+                    statusElement = <span className="text-[8px] font-black text-white/40 uppercase tracking-tighter">Current</span>;
+                  }
+                } else if (!isFuture) {
+                  bgClass = "bg-rose-50"; borderClass = "border-rose-100"; textClass = "text-rose-700";
+                  statusElement = <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absence</span>;
+                }
+
+                return (
+                  <div 
+                    key={i} 
+                    onClick={() => !isFuture && (setSelectedDate(dateStr), setShowRegularizationModal(true))}
+                    className={`min-h-[64px] border-2 rounded-2xl p-2 flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-95 ${bgClass} ${borderClass}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className={`text-[11px] font-black ${textClass}`}>{i + 1}</span>
+                      {!isFuture && !isToday && dayEntries.length === 0 && !isWeekOff && (
+                        <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center animate-pulse">
+                          <i className="fas fa-clock-rotate-left text-[9px]"></i>
+                        </div>
+                      )}
+                      {dayEntries.length > 0 && <i className="fas fa-check-circle text-[9px] text-emerald-500"></i>}
+                    </div>
+                    
+                    {dayEntries.length > 0 ? (
+                      <div className="space-y-1 mt-1">
+                        <div className="flex justify-between items-center text-[8px] font-black opacity-60">
+                          <span>IN</span>
+                          <span>{new Date(checkIn?.timestamp!).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!1})}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[8px] font-black opacity-60">
+                          <span>OUT</span>
+                          <span>{checkOut ? new Date(checkOut.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!1}) : '--:--'}</span>
+                        </div>
+                        {totalHours > 0 && (
+                          <div className="pt-1 mt-1 border-t border-black/5 flex justify-between items-center">
+                            <span className="text-[7px] font-black uppercase text-[#9BA4B4]">Span</span>
+                            <span className="text-[9px] font-black text-emerald-700">{totalHours}h</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        {statusElement}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeMainTab === 'settings' && (
-         <div className="bg-white rounded-3xl p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
-            <div className="max-w-3xl mx-auto">
+         <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
+            <div className="max-w-4xl mx-auto">
                <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest mb-8 text-center">Work Environment Configuration</h3>
                
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -1367,8 +1517,8 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'holidays' && (
-        <div className="bg-white rounded-3xl p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
-          <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
+          <div className="max-w-5xl mx-auto">
             <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest mb-8 text-center">Annual Holiday Schedule</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {holidays.length > 0 ? holidays.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(h => (
@@ -1398,197 +1548,197 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'teamApprovals' && (
-        <div className="space-y-6 animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 border border-[#9BA4B4] shadow-sm">
-             <div className="flex items-center justify-between mb-6 border-b border-[#F1F6F9] pb-4">
+        <div className="space-y-6 animate-in fade-in pb-6">
+          <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm">
+             <div className="flex items-center justify-between mb-8 border-b border-[#F1F6F9] pb-5">
                 <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest">
                     <i className="fas fa-user-check mr-2 text-[#9BA4B4]"></i> Team Approvals Gateway
                 </h3>
-             </div>
-
-             <div className="space-y-8">
-                {/* Unified view: Stack all tables in one screen */}
-                
-                {/* 1. Regularization Section */}
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-bold text-[#14274E] uppercase tracking-widest flex items-center">
-                    <i className="fas fa-clock-rotate-left mr-2 text-[#9BA4B4]"></i> Pending Regularizations
-                  </h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                      <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
-                        <tr>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Type</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Req Login</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Req Logout</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Reason</th>
-                          <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#F1F6F9]">
-                        {teamPendingRegularizations.length > 0 ? teamPendingRegularizations.map(req => {
-                          const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
-                          return (
-                            <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] whitespace-nowrap">{req.date}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] text-[10px] uppercase tracking-tighter">{req.type.replace('_', ' ')}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.requestedLoginTime || '-'}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.requestedLogoutTime || '-'}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
-                              <td className="py-3 px-4 text-center">
-                                <div className="flex justify-center space-x-1">
-                                  <button onClick={() => handleTeamAction('reg', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
-                                  <button onClick={() => handleTeamAction('reg', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        }) : <tr><td colSpan={8} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending regularization requests</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* 2. Shift Swap Section */}
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-bold text-[#14274E] uppercase tracking-widest flex items-center">
-                    <i className="fas fa-shuffle mr-2 text-[#9BA4B4]"></i> Pending Shift Swaps
-                  </h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                      <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
-                        <tr>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Current Shift</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Requested Shift</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Reason</th>
-                          <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#F1F6F9]">
-                        {teamPendingShifts.length > 0 ? teamPendingShifts.map(req => {
-                          const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
-                          return (
-                            <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.date}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{getShiftDisplay(req.currentShiftId)}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{getShiftDisplay(req.requestedShiftId)}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
-                              <td className="py-3 px-4 text-center">
-                                <div className="flex justify-center space-x-1">
-                                  <button onClick={() => handleTeamAction('shift', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
-                                  <button onClick={() => handleTeamAction('shift', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        }) : <tr><td colSpan={7} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending shift swap requests</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* 3. Overtime Section */}
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-bold text-[#14274E] uppercase tracking-widest flex items-center">
-                    <i className="fas fa-stopwatch mr-2 text-[#9BA4B4]"></i> Pending Overtime
-                  </h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                      <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
-                        <tr>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Work Date</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Requested Hours</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Justification</th>
-                          <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#F1F6F9]">
-                        {teamPendingOvertime.length > 0 ? teamPendingOvertime.map(req => {
-                          const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
-                          return (
-                            <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.date}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-amber-700">{req.hours} Hours</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
-                              <td className="py-3 px-4 text-center">
-                                <div className="flex justify-center space-x-1">
-                                  <button onClick={() => handleTeamAction('ot', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
-                                  <button onClick={() => handleTeamAction('ot', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        }) : <tr><td colSpan={6} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending overtime requests</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* 4. Permission Hours Section */}
-                <div className="space-y-3">
-                  <h4 className="text-[10px] font-bold text-[#14274E] uppercase tracking-widest flex items-center">
-                    <i className="fas fa-clock-arrow-up mr-2 text-[#9BA4B4]"></i> Pending Permission Hours
-                  </h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                      <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
-                        <tr>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Start Time</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">End Time</th>
-                          <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Purpose</th>
-                          <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#F1F6F9]">
-                        {teamPendingPermissions.length > 0 ? teamPendingPermissions.map(req => {
-                          const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
-                          return (
-                            <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.date}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.startTime}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.endTime}</td>
-                              <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
-                              <td className="py-3 px-4 text-center">
-                                <div className="flex justify-center space-x-1">
-                                  <button onClick={() => handleTeamAction('perm', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
-                                  <button onClick={() => handleTeamAction('perm', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        }) : <tr><td colSpan={7} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending permission hour requests</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="flex bg-[#F1F6F9] rounded-xl p-1 border border-[#E2E8F0] space-x-1">
+                    {[
+                      { id: 'regularization', label: 'Regularization' },
+                      { id: 'shift', label: 'Shift Swap' },
+                      { id: 'overtime', label: 'Overtime' },
+                      { id: 'permission', label: 'Permission Hrs' }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveApprovalReviewTab(tab.id as any)}
+                            className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeApprovalReviewTab === tab.id ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
              </div>
+
+             {/* Regularization Approvals */}
+             {activeApprovalReviewTab === 'regularization' && (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+                     <tr>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Type</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Req Login</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Req Logout</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Reason</th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-[#F1F6F9]">
+                     {teamPendingRegularizations.length > 0 ? teamPendingRegularizations.map(req => {
+                       const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
+                       return (
+                         <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] whitespace-nowrap">{req.date}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] text-[10px] uppercase tracking-tighter">{req.type.replace('_', ' ')}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.requestedLoginTime || '-'}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.requestedLogoutTime || '-'}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
+                           <td className="py-3 px-4 text-center">
+                             <div className="flex justify-center space-x-1">
+                               <button onClick={() => handleTeamAction('reg', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
+                               <button onClick={() => handleTeamAction('reg', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
+                             </div>
+                           </td>
+                         </tr>
+                       );
+                     }) : <tr><td colSpan={8} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending regularization requests</td></tr>}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+
+             {/* Shift Swap Approvals */}
+             {activeApprovalReviewTab === 'shift' && (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+                     <tr>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Current Shift</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Requested Shift</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Reason</th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-[#F1F6F9]">
+                     {teamPendingShifts.length > 0 ? teamPendingShifts.map(req => {
+                       const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
+                       return (
+                         <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.date}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{getShiftDisplay(req.currentShiftId)}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{getShiftDisplay(req.requestedShiftId)}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
+                           <td className="py-3 px-4 text-center">
+                             <div className="flex justify-center space-x-1">
+                               <button onClick={() => handleTeamAction('shift', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
+                               <button onClick={() => handleTeamAction('shift', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
+                             </div>
+                           </td>
+                         </tr>
+                       );
+                     }) : <tr><td colSpan={7} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending shift swap requests</td></tr>}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+
+             {/* Overtime Approvals */}
+             {activeApprovalReviewTab === 'overtime' && (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+                     <tr>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Work Date</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Requested Hours</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Justification</th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-[#F1F6F9]">
+                     {teamPendingOvertime.length > 0 ? teamPendingOvertime.map(req => {
+                       const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
+                       return (
+                         <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.date}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-amber-700">{req.hours} Hours</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
+                           <td className="py-3 px-4 text-center">
+                             <div className="flex justify-center space-x-1">
+                               <button onClick={() => handleTeamAction('ot', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
+                               <button onClick={() => handleTeamAction('ot', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
+                             </div>
+                           </td>
+                         </tr>
+                       );
+                     }) : <tr><td colSpan={6} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending overtime requests</td></tr>}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+
+             {/* Permission Hours Approvals */}
+             {activeApprovalReviewTab === 'permission' && (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+                     <tr>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Start Time</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">End Time</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Purpose</th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-[#F1F6F9]">
+                     {teamPendingPermissions.length > 0 ? teamPendingPermissions.map(req => {
+                       const emp = MOCK_EMPLOYEES.find(e => e.id === req.employeeId);
+                       return (
+                         <tr key={req.id} className="text-xs font-semibold text-[#394867] hover:bg-gray-50 transition-colors">
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-mono text-[10px]">{req.employeeId}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] font-bold text-[#14274E]">{emp?.name}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.date}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.startTime}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9]">{req.endTime}</td>
+                           <td className="py-3 px-4 border-r border-[#F1F6F9] max-w-xs truncate">{req.reason || '-'}</td>
+                           <td className="py-3 px-4 text-center">
+                             <div className="flex justify-center space-x-1">
+                               <button onClick={() => handleTeamAction('perm', req.id, 'APPROVED')} className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors shadow-sm"><i className="fas fa-check text-xs"></i></button>
+                               <button onClick={() => handleTeamAction('perm', req.id, 'REJECTED')} className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-sm"><i className="fas fa-times text-xs"></i></button>
+                             </div>
+                           </td>
+                         </tr>
+                       );
+                     }) : <tr><td colSpan={7} className="py-6 text-center text-xs text-[#9BA4B4] font-medium italic">No pending permission hour requests</td></tr>}
+                   </tbody>
+                 </table>
+               </div>
+             )}
           </div>
         </div>
       )}
 
       {activeMainTab === 'applyOnBehalf' && (
-        <div className="space-y-6 animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 border border-[#9BA4B4] shadow-sm">
-             <div className="flex items-center justify-between mb-6 border-b border-[#F1F6F9] pb-4">
+        <div className="space-y-6 animate-in fade-in pb-6">
+          <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm">
+             <div className="flex items-center justify-between mb-8 border-b border-[#F1F6F9] pb-5">
                 <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest">
                     <i className="fas fa-user-plus mr-2 text-[#9BA4B4]"></i> Application on Behalf
                 </h3>
@@ -1756,8 +1906,9 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'reports' && (
-      <div className="animate-in fade-in duration-300">
-        <div className="flex space-x-4 border-b border-[#9BA4B4] px-1 mb-4 overflow-x-auto">
+      <div className="space-y-6 animate-in fade-in pb-6">
+        <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm">
+        <div className="flex space-x-2 border-b border-[#E5E7EB] px-3 mb-6 overflow-x-auto">
           {[
             { id: 'summary', label: 'Summary', icon: 'fa-chart-pie' },
             { id: 'attendance', label: 'Attendance', icon: 'fa-calendar-check' },
@@ -1769,8 +1920,8 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveEmployeeReport(tab.id as any)}
-              className={`pb-2 px-2 font-bold text-xs uppercase tracking-[0.15em] transition-all border-b-2 flex items-center space-x-1.5 whitespace-nowrap ${
-                activeEmployeeReport === tab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
+              className={`pb-3 px-4 font-bold text-[10px] uppercase tracking-widest transition-all border-b-2 flex items-center space-x-2 whitespace-nowrap ${
+                activeEmployeeReport === tab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6] hover:border-[#9BA4B4]'
               }`}
             >
               <i className={`fas ${tab.icon}`}></i>
@@ -2946,7 +3097,7 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
              </div>
           </div>
         )}
-
+        </div>
       </div>
       )}
 

@@ -21,7 +21,7 @@ from app.core.exceptions import (
     SecurityValidationError, NotFoundError
 )
 from app.core.schemas import ErrorResponse, ResponseStatus
-from app.routers import auth, attendance, employees, shifts, requests, holidays
+from app.routers import auth, attendance, employees, shifts, requests, holidays, google_drive_proxy
 
 # Setup logging
 logger = setup_logging().getChild(__name__)
@@ -70,6 +70,7 @@ app.include_router(employees.router, prefix=settings.API_PREFIX, tags=["Employee
 app.include_router(shifts.router, prefix=settings.API_PREFIX, tags=["Shifts"])
 app.include_router(requests.router, prefix=settings.API_PREFIX, tags=["Requests"])
 app.include_router(holidays.router, prefix=settings.API_PREFIX, tags=["Holidays"])
+app.include_router(google_drive_proxy.router, tags=["Google Drive Models"])
 
 # Serve static assets (e.g., enrolled face images)
 app.mount("/static", StaticFiles(directory="static"), name="static")

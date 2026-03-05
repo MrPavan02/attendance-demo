@@ -4,7 +4,7 @@
  */
 
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:8000/api/v1',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',,
   TIMEOUT: 30000, // 30 seconds
 };
 
@@ -16,6 +16,10 @@ export const ENDPOINTS = {
     REGISTER: `${API_CONFIG.BASE_URL}/auth/register`,
     ME: `${API_CONFIG.BASE_URL}/auth/me`,
     LOGOUT: `${API_CONFIG.BASE_URL}/auth/logout`,
+    SETUP_PIN: `${API_CONFIG.BASE_URL}/auth/setup-pin`,
+    VERIFY_PIN: `${API_CONFIG.BASE_URL}/auth/verify-pin`,
+    DEVICE_PIN_STATUS: (employeeId: string, deviceId: string) => 
+      `${API_CONFIG.BASE_URL}/auth/device-pin-status/${employeeId}/${deviceId}`,
   },
   
   // Attendance

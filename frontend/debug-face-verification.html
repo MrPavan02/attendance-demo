@@ -169,13 +169,13 @@ async function checkModels() {
     try {
         showResult(resultId, 'Loading models...', 'info');
         
-        console.log('[Models] Starting model load from /face-api');
+        console.log('[Models] Starting model load from GitHub');
         
         const start = performance.now();
         await Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri('/face-api'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('/face-api'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('/face-api'),
+            faceapi.nets.ssdMobilenetv1.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/ssd_mobilenetv1_model'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_model'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_recognition_model'),
         ]);
         const duration = (performance.now() - start).toFixed(2);
         
@@ -204,11 +204,11 @@ async function testFaceDetection() {
     try {
         showResult(resultId, 'Loading models and image...', 'info');
         
-        // Load models if not already loaded
+        // Load models if not already loaded from GitHub
         await Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri('/face-api'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('/face-api'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('/face-api'),
+            faceapi.nets.ssdMobilenetv1.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/ssd_mobilenetv1_model'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_model'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_recognition_model'),
         ]);
         
         console.log('[Detection] Fetching image from:', url);
@@ -257,11 +257,11 @@ async function compareTwoFaces() {
     try {
         showResult(resultId, 'Loading and comparing faces...', 'info');
         
-        // Load models
+        // Load models from GitHub
         await Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri('/face-api'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('/face-api'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('/face-api'),
+            faceapi.nets.ssdMobilenetv1.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/ssd_mobilenetv1_model'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_landmark_68_model'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/face_recognition_model'),
         ]);
         
         console.log('[Compare] Fetching enrolled image:', enrolledUrl);

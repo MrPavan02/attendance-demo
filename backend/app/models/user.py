@@ -3,7 +3,7 @@ User Model
 Defines employee/user database schema
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, String, Boolean, DateTime, Enum as SQLEnum, JSON
 from sqlalchemy.sql import func
 from datetime import datetime
 import enum
@@ -30,6 +30,7 @@ class User(Base):
     role = Column(SQLEnum(UserRole), default=UserRole.EMPLOYEE, nullable=False)
     is_active = Column(Boolean, default=True)
     face_image_url = Column(String, nullable=True)
+    device_pins = Column(JSON, nullable=True, default=dict)  # Store device-specific PINs as JSON
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

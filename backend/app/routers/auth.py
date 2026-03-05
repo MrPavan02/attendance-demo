@@ -11,8 +11,10 @@ import logging
 from app.core.database import get_db
 from app.core.exceptions import ValidationError, NotFoundError, AuthenticationError
 from app.schemas.user import UserCreate, UserResponse, Token, LoginRequest, LoginResponse
+from app.schemas.device_pin import DevicePinSetup, DevicePinVerify, DevicePinResponse
 from app.core.schemas import SuccessResponse, MessageResponse, ResponseStatus
 from app.services.auth_service import auth_service
+from app.services.device_pin_service import device_pin_service
 from app.dependencies import get_current_active_user, require_hr_role
 from app.models.user import User
 
@@ -175,4 +177,147 @@ def logout(current_user: User = Depends(get_current_active_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Logout failed"
+        )
+
+
+@router.post("/setup-pin", response_model=SuccessResponse, status_code=status.HTTP_200_OK)
+def setup_device_pin(
+    pin_data: DevicePinSetup,
+    db: Session = Depends(get_db)
+):
+    """
+    Setup or update device-specific PIN for biometric fallback
+    
+    Args:
+        pin_data: Device PIN setup data including employee_id, device_id, and PIN
+    
+    Returns:
+        - 200: PIN setup successful
+        - 400: Invalid data
+        - 404: User not found
+        - 500: Server error
+    """
+    try:
+        logger.info(f"Setting up device PIN for {pin_data.employee_id} on device {pin_data.device_id[:8]}...")
+        
+        # Validate PIN format (must be digits only)
+        if not pin_data.pin.isdigit():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="PIN must contain only digits"
+            )
+        
+        success = device_pin_service.setup_device_pin(
+            db,
+            pin_data.employee_id,
+            pin_data.device_id,
+            pin_data.pin
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found or PIN setup failed"
+            )
+        
+        return SuccessResponse(
+            status=ResponseStatus.SUCCESS,
+            message="Device PIN setup successful",
+            data={"device_id": pin_data.device_id}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error setting up device PIN for {pin_data.employee_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to setup device PIN"
+        )
+
+
+@router.post("/verify-pin", response_model=SuccessResponse, status_code=status.HTTP_200_OK)
+def verify_device_pin(
+    pin_data: DevicePinVerify,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify device-specific PIN
+    
+    Args:
+        pin_data: Device PIN verification data including employee_id, device_id, and PIN
+    
+    Returns:
+        - 200: Verification result (verified true/false)
+        - 400: Invalid data
+        - 500: Server error
+    """
+    try:
+        logger.info(f"Verifying device PIN for {pin_data.employee_id} on device {pin_data.device_id[:8]}...")
+        
+        is_valid = device_pin_service.verify_device_pin(
+            db,
+            pin_data.employee_id,
+            pin_data.device_id,
+            pin_data.pin
+        )
+        
+        if is_valid:
+            return SuccessResponse(
+                status=ResponseStatus.SUCCESS,
+                message="PIN verified successfully",
+                data=DevicePinResponse(
+                    verified=True,
+                    device_id=pin_data.device_id
+                )
+            )
+        else:
+            return SuccessResponse(
+                status=ResponseStatus.ERROR,
+                message="Invalid PIN",
+                data=DevicePinResponse(
+                    verified=False,
+                    device_id=pin_data.device_id
+                )
+            )
+        
+    except Exception as e:
+        logger.exception(f"Error verifying device PIN for {pin_data.employee_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify device PIN"
+        )
+
+
+@router.get("/device-pin-status/{employee_id}/{device_id}", response_model=SuccessResponse)
+def check_device_pin_status(
+    employee_id: str,
+    device_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Check if a device has a PIN setup for the given employee
+    
+    Args:
+        employee_id: Employee ID
+        device_id: Device fingerprint/ID
+    
+    Returns:
+        - 200: Status information
+        - 500: Server error
+    """
+    try:
+        has_pin = device_pin_service.get_device_pin_status(db, employee_id, device_id)
+        
+        return SuccessResponse(
+            status=ResponseStatus.SUCCESS,
+            message="Device PIN status retrieved",
+            data={"has_pin": has_pin, "device_id": device_id}
+        )
+        
+    except Exception as e:
+        logger.exception(f"Error checking device PIN status for {employee_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to check device PIN status"
         )
