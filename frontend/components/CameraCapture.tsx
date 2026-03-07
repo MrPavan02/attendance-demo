@@ -4,19 +4,22 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
   isProcessing: boolean;
+  onDimensionsChange?: (size: { width: number; height: number }) => void;
 }
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing }) => {
+const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing, onDimensionsChange }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [videoSize, setVideoSize] = useState({ width: 640, height: 480 });
+  const [aspectRatio, setAspectRatio] = useState(640 / 480);
 
   useEffect(() => {
     async function startCamera() {
       try {
         const s = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'user', width: 640, height: 480 } 
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
         });
         setStream(s);
         if (videoRef.current) {
@@ -32,19 +35,42 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing }
     };
   }, []);
 
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const handleLoadedMetadata = () => {
+      const { videoWidth, videoHeight } = videoEl;
+      if (videoWidth && videoHeight) {
+        setVideoSize({ width: videoWidth, height: videoHeight });
+        setAspectRatio(videoWidth / videoHeight);
+        onDimensionsChange?.({ width: videoWidth, height: videoHeight });
+      }
+    };
+
+    videoEl.addEventListener('loadedmetadata', handleLoadedMetadata);
+    return () => videoEl.removeEventListener('loadedmetadata', handleLoadedMetadata);
+  }, [stream, onDimensionsChange]);
+
   const capture = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
       if (context) {
-        context.drawImage(videoRef.current, 0, 0, 640, 480);
+        const { width, height } = videoSize;
+        canvasRef.current.width = width;
+        canvasRef.current.height = height;
+        context.drawImage(videoRef.current, 0, 0, width, height);
         const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.8);
         onCapture(dataUrl);
       }
     }
-  }, [onCapture]);
+  }, [onCapture, videoSize]);
 
   return (
-    <div className="relative w-full aspect-video bg-[#F1F6F9] rounded-2xl overflow-hidden border border-[#9BA4B4] shadow-sm group">
+    <div 
+      className="relative w-full bg-[#F1F6F9] rounded-2xl overflow-hidden border border-[#9BA4B4] shadow-sm group"
+      style={{ aspectRatio: Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : undefined }}
+    >
       {error ? (
         <div className="flex flex-col items-center justify-center h-full text-[#394867] p-8 text-center">
           <i className="fas fa-video-slash text-5xl mb-4 text-[#9BA4B4]"></i>
@@ -58,6 +84,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing }
             autoPlay 
             playsInline 
             className="w-full h-full object-cover scale-x-[-1]"
+            style={{ aspectRatio: Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : undefined }}
           />
           <canvas ref={canvasRef} width="640" height="480" className="hidden" />
           
