@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from './components/Layout';
 import CameraCapture from './components/CameraCapture';
@@ -35,19 +36,35 @@ const App: React.FC = () => {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [cameraDimensions, setCameraDimensions] = useState({ width: 640, height: 480 });
   const [viewportHeight, setViewportHeight] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800));
+  const [viewportWidth, setViewportWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1280));
 
   const cameraAspectRatio = useMemo(() => {
     const ratio = cameraDimensions.width / cameraDimensions.height;
     return Number.isFinite(ratio) && ratio > 0 ? ratio : 4 / 5;
   }, [cameraDimensions]);
 
+  const isMobileSecurityView = viewportWidth <= 640;
+
   const securityCoreViewStyle = useMemo<React.CSSProperties>(() => {
+    if (isMobileSecurityView) {
+      const mobileHeight = 260;
+      return {
+        width: '100%',
+        height: `${mobileHeight}px`,
+        maxHeight: `${mobileHeight}px`,
+        minHeight: `${mobileHeight}px`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      };
+    }
+
     const maxHeight = Math.round(Math.max(320, viewportHeight * 0.75));
     return {
       aspectRatio: cameraAspectRatio,
       maxHeight: `${maxHeight}px`
     };
-  }, [cameraAspectRatio, viewportHeight]);
+  }, [cameraAspectRatio, viewportHeight, viewportWidth, isMobileSecurityView]);
 
   const handleCameraDimensions = useCallback((size: { width: number; height: number }) => {
     setCameraDimensions(size);
@@ -107,7 +124,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const handleResize = () => setViewportHeight(window.innerHeight);
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+      setViewportWidth(window.innerWidth);
+    };
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -578,6 +598,7 @@ const App: React.FC = () => {
                       onCapture={initiateAttendance}
                       isProcessing={isProcessing}
                       onDimensionsChange={handleCameraDimensions}
+                      isMobileViewport={isMobileSecurityView}
                     />
                   </div>
                 </div>
