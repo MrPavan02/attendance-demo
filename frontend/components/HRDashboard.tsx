@@ -47,7 +47,7 @@ const ShiftAssignmentModal: React.FC<ShiftAssignmentModalProps> = ({ isOpen, onC
 
   // Generate date range
   const dateRange = useMemo(() => {
-    const dates = [];
+    const dates: string[] = [];
     const start = new Date(startDate);
     const end = new Date(endDate);
     
@@ -65,8 +65,6 @@ const ShiftAssignmentModal: React.FC<ShiftAssignmentModalProps> = ({ isOpen, onC
     
     return dates;
   }, [startDate, endDate]);
-
-  // Filter employees based on department and search
   const filteredEmployees = useMemo(() => {
     let filtered = MOCK_EMPLOYEES;
     
@@ -370,8 +368,8 @@ const ShiftAssignmentModal: React.FC<ShiftAssignmentModalProps> = ({ isOpen, onC
           {dateRange.length > 0 ? (
             <div className="overflow-x-auto h-full">
               <div className="min-w-max">
-                <table className="w-full border border-[#9BA4B4] rounded-lg overflow-hidden">
-                  <thead className="sticky top-0 z-10">
+                <table className="app-table w-full border border-[#9BA4B4] rounded-lg overflow-hidden">
+                  <thead className="sticky top-0 z-10 table-head-responsive">
                     <tr className="bg-[#14274E] text-white">
                       <th className="py-2 px-3 text-left text-xs font-bold uppercase tracking-widest border-r border-white/20 sticky left-0 bg-[#14274E] z-20">
                         <div className="space-y-1">
@@ -411,7 +409,7 @@ const ShiftAssignmentModal: React.FC<ShiftAssignmentModalProps> = ({ isOpen, onC
                       </th>
                       {dateRange.map(date => (
                         <th key={date} className="py-2 px-2 text-center text-xs font-bold uppercase tracking-widest border-r border-white/20 min-w-[100px]">
-                          {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          <span className="table-head-label">{new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                         </th>
                       ))}
                     </tr>
@@ -587,12 +585,49 @@ const ShiftAssignmentModal: React.FC<ShiftAssignmentModalProps> = ({ isOpen, onC
   );
 };
 
+type HrMainTabId = 'overview' | 'requests' | 'behalf' | 'reports' | 'holidays' | 'settings';
+type HrBehalfTabId = 'regularization' | 'shifts' | 'overtime' | 'permission';
+type HrReportTabId = 'attendance' | 'misPunch' | 'regularization' | 'shift' | 'shiftChange' | 'overtime' | 'permission';
+type HrSettingsTabId = 'governance' | 'weekoff' | 'locking';
+
+const HR_MAIN_TABS: Array<{ id: HrMainTabId; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'requests', label: 'Requests' },
+  { id: 'behalf', label: 'On Behalf' },
+  { id: 'reports', label: 'Reports' },
+  { id: 'holidays', label: 'Holidays' },
+  { id: 'settings', label: 'Settings' }
+];
+
+const HR_BEHALF_TABS: Array<{ id: HrBehalfTabId; label: string; description: string }> = [
+  { id: 'regularization', label: 'Regularization', description: 'Correct attendance events' },
+  { id: 'shifts', label: 'Shift Planner', description: 'Assign and audit shifts' },
+  { id: 'overtime', label: 'Overtime', description: 'Authorize OT payouts' },
+  { id: 'permission', label: 'Permissions', description: 'Review short-leave requests' }
+];
+
+const HR_REPORT_TABS: Array<{ id: HrReportTabId; label: string }> = [
+  { id: 'attendance', label: 'Attendance' },
+  { id: 'misPunch', label: 'Mis Punch' },
+  { id: 'regularization', label: 'Regularization' },
+  { id: 'shift', label: 'Shift Planner' },
+  { id: 'shiftChange', label: 'Shift Change' },
+  { id: 'overtime', label: 'Overtime' },
+  { id: 'permission', label: 'Permission Hours' }
+];
+
+const HR_SETTINGS_TABS: Array<{ id: HrSettingsTabId; label: string }> = [
+  { id: 'governance', label: 'Corporate Governance' },
+  { id: 'weekoff', label: 'Interval & Week Off' },
+  { id: 'locking', label: 'Attendance Locking' }
+];
+
 const HRDashboard: React.FC = () => {
   // REFACTORED STATE
-  const [activeTab, setActiveTab] = useState<'overview' | 'requests' | 'behalf' | 'reports' | 'holidays' | 'settings'>('overview');
-  const [activeBehalfTab, setActiveBehalfTab] = useState<'regularization' | 'shifts' | 'overtime' | 'permission'>('regularization');
-  const [activeReportSubTab, setActiveReportSubTab] = useState<'attendance' | 'misPunch' | 'regularization' | 'shift' | 'shiftChange' | 'overtime' | 'permission'>('attendance');
-  const [activeSettingsSubTab, setActiveSettingsSubTab] = useState<'governance' | 'weekoff' | 'locking'>('governance');
+  const [activeTab, setActiveTab] = useState<HrMainTabId>('overview');
+  const [activeBehalfTab, setActiveBehalfTab] = useState<HrBehalfTabId>('regularization');
+  const [activeReportSubTab, setActiveReportSubTab] = useState<HrReportTabId>('attendance');
+  const [activeSettingsSubTab, setActiveSettingsSubTab] = useState<HrSettingsTabId>('governance');
   
   const [selectedCountry, setSelectedCountry] = useState('India'); // Default to India
   const [selectedState, setSelectedState] = useState('All States');
@@ -957,13 +992,88 @@ const HRDashboard: React.FC = () => {
   const todayAttendance = attendanceService.getAttendanceForDate(todayStr);
   const prevAttendance = attendanceService.getAttendanceForDate(prevWorkDayStr);
 
+  const todayLoginSet = useMemo(() => {
+    const ids = new Set<string>();
+    todayAttendance.forEach(entry => {
+      if (entry.type === 'IN') {
+        ids.add(entry.employeeId);
+      }
+    });
+    return ids;
+  }, [todayAttendance]);
+
+  const todayLogoutSet = useMemo(() => {
+    const ids = new Set<string>();
+    todayAttendance.forEach(entry => {
+      if (entry.type === 'OUT') {
+        ids.add(entry.employeeId);
+      }
+    });
+    return ids;
+  }, [todayAttendance]);
+
   const employeeStatusList = useMemo(() => {
     return MOCK_EMPLOYEES.map(emp => {
-      const isPresentToday = todayAttendance.some(e => e.employeeId === emp.id && e.type === 'IN');
+      const isPresentToday = todayLoginSet.has(emp.id);
       const isPresentPrev = prevAttendance.some(e => e.employeeId === emp.id && e.type === 'IN');
       return { ...emp, isPresentToday, isPresentPrev };
     });
-  }, [todayAttendance, prevAttendance]);
+  }, [todayLoginSet, prevAttendance]);
+
+  const activeEmployeeCount = employeeStatusList.length;
+  const loginCount = todayLoginSet.size;
+  const logoutCount = todayLogoutSet.size;
+  const absentCount = Math.max(0, activeEmployeeCount - loginCount);
+
+  const leaveCount = useMemo(() => {
+    const leaveRequests = attendanceService.getRegularizationRequests();
+    return employeeStatusList.filter(emp =>
+      leaveRequests.some(req => req.employeeId === emp.id && req.date === todayStr && req.status === 'APPROVED')
+    ).length;
+  }, [employeeStatusList, todayStr]);
+
+  const workforceCards = useMemo(() => ([
+    {
+      label: 'Active Employee',
+      value: activeEmployeeCount,
+      icon: 'fa-users',
+      iconBg: 'bg-[#14274E]/10',
+      iconColor: 'text-[#14274E]',
+      valueColor: 'text-[#14274E]'
+    },
+    {
+      label: 'Log IN',
+      value: loginCount,
+      icon: 'fa-right-to-bracket',
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+      valueColor: 'text-emerald-700'
+    },
+    {
+      label: 'Log OUT',
+      value: logoutCount,
+      icon: 'fa-right-from-bracket',
+      iconBg: 'bg-slate-100',
+      iconColor: 'text-slate-600',
+      valueColor: 'text-slate-700'
+    },
+    {
+      label: 'Leave',
+      value: leaveCount,
+      icon: 'fa-calendar-check',
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      valueColor: 'text-purple-700'
+    },
+    {
+      label: 'Absent',
+      value: absentCount,
+      icon: 'fa-user-xmark',
+      iconBg: 'bg-rose-100',
+      iconColor: 'text-rose-600',
+      valueColor: 'text-rose-700'
+    }
+  ]), [activeEmployeeCount, loginCount, logoutCount, leaveCount, absentCount]);
 
   // Filter employees for employee tab
   const filteredEmployeeStatusList = useMemo(() => {
@@ -1917,125 +2027,85 @@ const HRDashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 animate-in fade-in duration-500">
-      <div className="flex flex-wrap gap-2 border-b border-[#9BA4B4] px-1">
-        {[
-          { id: 'overview', label: 'Overview' },
-          { id: 'requests', label: 'Approvals' },
-          { id: 'behalf', label: 'Apply on behalf' },
-          { id: 'reports', label: 'Reports' },
-          { id: 'holidays', label: 'Holidays' },
-          { id: 'settings', label: 'Settings' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-              activeTab === tab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
-            }`}
+      <div className="border-b border-[#9BA4B4] px-1 space-y-2 sm:space-y-0">
+        <div className="sm:hidden">
+          <select
+            aria-label="Select admin section"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as HrMainTabId)}
+            className="w-full border border-[#E5E7EB] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
           >
-            {tab.label}
-          </button>
-        ))}
+            {HR_MAIN_TABS.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="hidden sm:flex flex-wrap gap-2">
+          {HR_MAIN_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
+                activeTab === tab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <div className="lg:col-span-3 space-y-3">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-[#9BA4B4]">
-                <h3 className="text-[#394867] font-bold text-[10px] uppercase tracking-[0.2em] mb-4">Workforce Status</h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-                  <div className="bg-[#F1F6F9] p-3 rounded-lg border border-[#9BA4B4]">
-                    <p className="text-2xl font-bold text-[#14274E]">{employeeStatusList.length}</p>
-                    <p className="text-[9px] font-bold text-[#394867] uppercase tracking-widest mt-0.5">Active Employee</p>
-                  </div>
-                  <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                    <p className="text-2xl font-bold text-emerald-700">{employeeStatusList.filter(e => e.isPresentToday).length}</p>
-                    <p className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest mt-0.5">Log IN</p>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <p className="text-2xl font-bold text-slate-700">{employeeStatusList.length - employeeStatusList.filter(e => e.isPresentToday).length}</p>
-                    <p className="text-[9px] font-bold text-[#394867] uppercase tracking-widest mt-0.5">Log OUT</p>
-                  </div>
-                  <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                    <p className="text-2xl font-bold text-purple-700">{
-                      employeeStatusList.filter(emp => {
-                        const today = new Date().toISOString().split('T')[0];
-                        const requests = attendanceService.getRegularizationRequests();
-                        return requests.some(r => 
-                          r.employeeId === emp.id && 
-                          r.date === today && 
-                          r.status === 'APPROVED'
-                        );
-                      }).length
-                    }</p>
-                    <p className="text-[9px] font-bold text-purple-700 uppercase tracking-widest mt-0.5">Leave</p>
-                  </div>
-                  <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                    <p className="text-2xl font-bold text-red-700">{
-                      employeeStatusList.filter(emp => {
-                        const today = new Date().toISOString().split('T')[0];
-                        const isPresent = emp.isPresentToday;
-                        const weekOffs = attendanceService.getEmployeeWeekOffDays(emp.id);
-                        const todayDay = new Date().getDay();
-                        const isWeekOff = weekOffs.includes(todayDay);
-                        const holidays = adminService.getHolidays();
-                        const isHoliday = holidays.some(h => h.date === today);
-                        const leaveRequests = attendanceService.getRegularizationRequests();
-                        const isOnLeave = leaveRequests.some(r => 
-                          r.employeeId === emp.id && 
-                          r.date === today && 
-                          r.status === 'APPROVED'
-                        );
-                        
-                        return !isPresent && !isWeekOff && !isHoliday && !isOnLeave;
-                      }).length
-                    }</p>
-                    <p className="text-[9px] font-bold text-red-700 uppercase tracking-widest mt-0.5">Absent</p>
-                  </div>
+          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-10 lg:gap-4">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#E5E7EB] space-y-4 lg:col-span-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div>
+                  <h3 className="text-[#14274E] font-black text-xs uppercase tracking-[0.3em]">Workforce Status</h3>
+                  <p className="text-[10px] font-semibold text-[#6B7280]">Today · {todayStr}</p>
                 </div>
+                <span className="text-[9px] font-black text-[#9BA4B4] uppercase tracking-[0.35em]">Live</span>
               </div>
-
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-[#9BA4B4]">
-                <h3 className="text-[#394867] font-bold text-[10px] uppercase tracking-[0.2em] mb-4">Identity Registry</h3>
-                <div className="divide-y divide-[#F1F6F9] overflow-hidden max-h-[200px] overflow-y-auto">
-                  {employeeStatusList.map(emp => (
-                    <div key={emp.id} className="py-2 flex justify-between items-center group transition-colors hover:bg-[#D6E4F0]/30">
-                      <div className="flex items-center space-x-3 px-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${emp.isPresentToday ? 'bg-[#14274E]' : 'bg-[#9BA4B4]'}`}></div>
-                        <div>
-                          <p className="text-xs font-bold text-[#14274E]">{emp.name}</p>
-                          <p className="text-[8px] text-[#394867] font-bold uppercase tracking-widest opacity-70">{emp.id}</p>
-                        </div>
-                      </div>
-                      <span className={`text-[7px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest border ${emp.isPresentToday ? 'bg-[#D6E4F0] text-[#14274E] border-[#14274E]' : 'bg-white text-[#394867] border-[#9BA4B4]'
-                        }`}>
-                        {emp.isPresentToday ? 'Online' : 'Pending'}
-                      </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {workforceCards.map(card => (
+                  <div key={card.label} className="flex items-center justify-between gap-3 p-3 rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] shadow-sm">
+                    <div>
+                      <p className="text-[9px] font-black text-[#9BA4B4] uppercase tracking-[0.3em]">{card.label}</p>
+                      <p className={`text-xl font-black mt-1 ${card.valueColor}`}>{card.value}</p>
                     </div>
-                  ))}
-                </div>
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${card.iconBg}`}>
+                      <i className={`fas ${card.icon} text-sm ${card.iconColor}`}></i>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="lg:col-span-1">
-              <div className="bg-[#14274E] text-white rounded-xl p-3 shadow-xl relative overflow-hidden h-full">
-                <h3 className="text-[#9BA4B4] font-bold text-[10px] uppercase tracking-[0.2em] mb-4">Audit Directive</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[10px] font-bold text-[#D6E4F0]/60 uppercase tracking-widest mb-0.5">Ledger Node</p>
-                    <p className="text-xs font-bold text-[#D6E4F0]">{prevWorkDayStr}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-[#D6E4F0]/60 uppercase tracking-widest mb-2">Efficiency Rating</p>
-                    <p className="text-xl font-bold text-white">92.4%</p>
-                  </div>
-                  <div className="pt-3 border-t border-white/10">
-                    <p className="text-[11px] leading-relaxed text-[#9BA4B4] font-medium italic">
-                      "Enterprise compliance polling active across all nodes."
-                    </p>
-                  </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#E5E7EB] lg:col-span-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div>
+                  <h3 className="text-[#14274E] font-black text-xs uppercase tracking-[0.3em]">Identity Registry</h3>
+                  <p className="text-[10px] font-semibold text-[#6B7280]">Presence overview</p>
                 </div>
+                <span className="text-[9px] font-black text-[#9BA4B4] uppercase tracking-[0.35em]">{employeeStatusList.length} Employees</span>
+              </div>
+              <div className="mt-3 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar divide-y divide-[#EEF2FF]">
+                {employeeStatusList.length === 0 && (
+                  <div className="py-5 text-center text-[11px] font-semibold text-[#9BA4B4]">No employee records available.</div>
+                )}
+                {employeeStatusList.map(emp => (
+                  <div key={emp.id} className="py-2.5 px-2 flex items-center justify-between gap-4 hover:bg-[#F8FAFC] rounded-xl transition-colors">
+                    <div>
+                      <p className="text-sm font-bold text-[#14274E]">{emp.name}</p>
+                      <p className="text-[9px] font-black text-[#9BA4B4] uppercase tracking-[0.35em]">{emp.id}</p>
+                    </div>
+                    <span className={`text-[9px] font-black px-3 py-0.5 rounded-full uppercase tracking-[0.25em] border ${emp.isPresentToday ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                      {emp.isPresentToday ? 'Online' : 'Pending'}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -2195,8 +2265,8 @@ const HRDashboard: React.FC = () => {
 
              <div className="bg-white rounded-xl p-4 shadow-sm border border-[#9BA4B4] overflow-hidden">
                <div className="overflow-x-auto">
-                 <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                   <thead>
+                 <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                   <thead className="table-head-responsive">
                      <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
                        <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">
                          <div className="space-y-1">
@@ -2408,15 +2478,15 @@ const HRDashboard: React.FC = () => {
             
             {combinedPendingRequests.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                  <thead>
+                <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                  <thead className="table-head-responsive">
                     <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]">Name</th>
-                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]">Type</th>
-                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]">Details</th>
-                      <th className="py-2 px-3 border-b border-[#9BA4B4] text-center">Action</th>
+                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Type</span></th>
+                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                      <th className="py-2 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Details</span></th>
+                      <th className="py-2 px-3 border-b border-[#9BA4B4] text-center"><span className="table-head-label">Action</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2499,23 +2569,34 @@ const HRDashboard: React.FC = () => {
 
       {activeTab === 'behalf' && (
         <div className="space-y-6 animate-in fade-in">
-          <div className="flex space-x-4 border-b border-[#9BA4B4] px-1 overflow-x-auto">
-            {[
-              { id: 'regularization', label: 'Regularization' },
-              { id: 'shifts', label: 'Shifts' },
-              { id: 'overtime', label: 'Over-time' },
-              { id: 'permission', label: 'Permission Hours' }
-            ].map(subTab => (
-              <button
-                key={subTab.id}
-                onClick={() => setActiveBehalfTab(subTab.id as any)}
-                className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-                  activeBehalfTab === subTab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
-                }`}
+          <div className="border-b border-[#9BA4B4] px-1 space-y-2 sm:space-y-0">
+            <div className="sm:hidden">
+              <select
+                aria-label="Select admin request type"
+                value={activeBehalfTab}
+                onChange={(e) => setActiveBehalfTab(e.target.value as HrBehalfTabId)}
+                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
               >
-                {subTab.label}
-              </button>
-            ))}
+                {HR_BEHALF_TABS.map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hidden sm:flex space-x-4 overflow-x-auto">
+              {HR_BEHALF_TABS.map((subTab) => (
+                <button
+                  key={subTab.id}
+                  onClick={() => setActiveBehalfTab(subTab.id)}
+                  className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
+                    activeBehalfTab === subTab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
+                  }`}
+                >
+                  {subTab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-4">
@@ -2606,14 +2687,14 @@ const HRDashboard: React.FC = () => {
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-[#9BA4B4]">
                   <h3 className="text-sm font-bold text-[#14274E] tracking-tight mb-3">Current Shift Assignments</h3>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                      <thead>
+                    <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                      <thead className="table-head-responsive">
                         <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Name</th>
-                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Shift</th>
-                          <th className="py-1.5 px-3 border-b border-btn">Actions</th>
+                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                          <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Shift</span></th>
+                          <th className="py-1.5 px-3 border-b border-btn"><span className="table-head-label">Actions</span></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2670,26 +2751,34 @@ const HRDashboard: React.FC = () => {
 
       {activeTab === 'reports' && (
         <div className="space-y-6 animate-in fade-in">
-          <div className="flex space-x-4 border-b border-[#9BA4B4] px-1 overflow-x-auto">
-            {[
-              { id: 'attendance', label: 'Attendance Report' },
-              { id: 'misPunch', label: 'Mis-Punch Report' },
-              { id: 'regularization', label: 'Reg Report' },
-              { id: 'shift', label: 'Shift Report' },
-              { id: 'shiftChange', label: 'Shift Change Report' },
-              { id: 'overtime', label: 'Over-time Report' },
-              { id: 'permission', label: 'Permission Hours Report' }
-            ].map(subTab => (
-              <button
-                key={subTab.id}
-                onClick={() => setActiveReportSubTab(subTab.id as any)}
-                className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-                  activeReportSubTab === subTab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
-                }`}
+          <div className="border-b border-[#9BA4B4] px-1 space-y-2 sm:space-y-0">
+            <div className="sm:hidden">
+              <select
+                aria-label="Select admin report type"
+                value={activeReportSubTab}
+                onChange={(e) => setActiveReportSubTab(e.target.value as HrReportTabId)}
+                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
               >
-                {subTab.label}
-              </button>
-            ))}
+                {HR_REPORT_TABS.map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hidden sm:flex space-x-4 overflow-x-auto">
+              {HR_REPORT_TABS.map((subTab) => (
+                <button
+                  key={subTab.id}
+                  onClick={() => setActiveReportSubTab(subTab.id)}
+                  className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
+                    activeReportSubTab === subTab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
+                  }`}
+                >
+                  {subTab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-4">
@@ -2844,18 +2933,18 @@ const HRDashboard: React.FC = () => {
 
                   {generatedReport.length > 0 && (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                         <thead>
+                      <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                         <thead className="table-head-responsive">
                           <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Employee Id</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Employee Name</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Department</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Location</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout</th>
-                            <th className="py-1.5 px-3 border-b border-[#9BA4B4]">{reportType === 'daily' ? 'Total Hours' : 'Total Days'}</th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Employee Id</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Employee Name</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Department</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Location</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout</span></th>
+                            <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">{reportType === 'daily' ? 'Total Hours' : 'Total Days'}</span></th>
                           </tr>
                          </thead>
                          <tbody>
@@ -3036,20 +3125,20 @@ const HRDashboard: React.FC = () => {
                   {/* Regularization Table */}
                   {hasGeneratedRegReport && (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                        <thead>
+                      <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                        <thead className="table-head-responsive">
                           <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.No</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Name</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Type</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Req In</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Req Out</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approved Date</th>
-                            <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.No</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Type</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Req In</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Req Out</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
+                            <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3213,14 +3302,14 @@ const HRDashboard: React.FC = () => {
                   </div>
                   
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border border-[#9BA4B4] rounded-lg">
-                       <thead className="bg-[#D6E4F0] text-[#14274E] text-[10px] font-bold uppercase">
+                    <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg">
+                       <thead className="bg-[#D6E4F0] text-[#14274E] text-[10px] font-bold uppercase table-head-responsive">
                           <tr>
-                            <th className="p-2 border-r border-[#9BA4B4]">Date</th>
-                            <th className="p-2 border-r border-[#9BA4B4]">Emp ID</th>
-                            <th className="p-2 border-r border-[#9BA4B4]">Employee</th>
-                            <th className="p-2 border-r border-[#9BA4B4]">Assigned Shift</th>
-                            <th className="p-2">Actual Timing</th>
+                            <th className="p-2 border-r border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                            <th className="p-2 border-r border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                            <th className="p-2 border-r border-[#9BA4B4]"><span className="table-head-label">Employee</span></th>
+                            <th className="p-2 border-r border-[#9BA4B4]"><span className="table-head-label">Assigned Shift</span></th>
+                            <th className="p-2"><span className="table-head-label">Actual Timing</span></th>
                           </tr>
                        </thead>
                        <tbody>
@@ -3392,18 +3481,18 @@ const HRDashboard: React.FC = () => {
 
                   {hasGeneratedShiftChangeReport && (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                        <thead>
+                      <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                        <thead className="table-head-responsive">
                           <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Current Shift</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested Shift</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approved Date</th>
-                            <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Current Shift</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested Shift</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                            <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
+                            <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3481,28 +3570,28 @@ const HRDashboard: React.FC = () => {
           </h4>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border border-[#9BA4B4] rounded-lg border-collapse">
-              <thead>
+            <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg border-collapse">
+              <thead className="table-head-responsive">
                 <tr className="bg-[#D6E4F0] text-[#14274E] text-[10px] font-bold uppercase tracking-widest text-center">
-                  <th className="py-2 px-3 border border-[#9BA4B4]" rowSpan={2}>S.No.</th>
-                  <th className="py-2 px-3 border border-[#9BA4B4]" rowSpan={2}>State</th>
+                  <th className="py-2 px-3 border border-[#9BA4B4]" rowSpan={2}><span className="table-head-label">S.No.</span></th>
+                  <th className="py-2 px-3 border border-[#9BA4B4]" rowSpan={2}><span className="table-head-label">State</span></th>
                   {uniqueHolidays.map((h, i) => (
                     <th key={`name-${i}`} className="py-2 px-3 border border-[#9BA4B4]">
-                      {h.name}
+                      <span className="table-head-label">{h.name}</span>
                     </th>
                   ))}
                   {uniqueHolidays.length === 0 && (
-                    <th className="py-2 px-3 border border-[#9BA4B4]">No Declared Holidays</th>
+                    <th className="py-2 px-3 border border-[#9BA4B4]"><span className="table-head-label">No Declared Holidays</span></th>
                   )}
                 </tr>
                 <tr className="bg-[#D6E4F0] text-[#14274E] text-[10px] font-bold uppercase tracking-widest text-center">
                   {uniqueHolidays.map((h, i) => (
                     <th key={`date-${i}`} className="py-2 px-3 border border-[#9BA4B4]">
-                      {h.date}
+                      <span className="table-head-label">{h.date}</span>
                     </th>
                   ))}
                   {uniqueHolidays.length === 0 && (
-                    <th className="py-2 px-3 border border-[#9BA4B4]">-</th>
+                    <th className="py-2 px-3 border border-[#9BA4B4]"><span className="table-head-label">-</span></th>
                   )}
                 </tr>
               </thead>
@@ -3537,22 +3626,34 @@ const HRDashboard: React.FC = () => {
       {activeTab === 'settings' && (
         <div className="space-y-6 animate-in fade-in">
           {/* Settings Sub-Tabs */}
-          <div className="flex space-x-4 border-b border-[#9BA4B4] px-1 overflow-x-auto">
-            {[
-              { id: 'governance', label: 'Corporate Governance' },
-              { id: 'weekoff', label: 'Interval & Week Off' },
-              { id: 'locking', label: 'Attendance Locking' }
-            ].map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setActiveSettingsSubTab(sub.id as any)}
-                className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-                  activeSettingsSubTab === sub.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
-                }`}
+          <div className="border-b border-[#9BA4B4] px-1 space-y-2 sm:space-y-0">
+            <div className="sm:hidden">
+              <select
+                aria-label="Select settings section"
+                value={activeSettingsSubTab}
+                onChange={(e) => setActiveSettingsSubTab(e.target.value as HrSettingsTabId)}
+                className="w-full border border-[#E2E8F0] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
               >
-                {sub.label}
-              </button>
-            ))}
+                {HR_SETTINGS_TABS.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hidden sm:flex space-x-4 overflow-x-auto">
+              {HR_SETTINGS_TABS.map((sub) => (
+                <button
+                  key={sub.id}
+                  onClick={() => setActiveSettingsSubTab(sub.id)}
+                  className={`pb-2 px-3 font-bold text-[11px] uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
+                    activeSettingsSubTab === sub.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-4">
