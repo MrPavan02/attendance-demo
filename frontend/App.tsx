@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from './components/Layout';
 import CameraCapture from './components/CameraCapture';
 import AttendanceDashboard from './components/AttendanceDashboard';
@@ -29,13 +28,30 @@ const App: React.FC = () => {
   const [entries, setEntries] = useState<AttendanceEntry[]>([]);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [pendingCaptureData, setPendingCaptureData] = useState<{ image: string } | null>(null);
-  const [pendingLoginData, setPendingLoginData] = useState<any>(null);
-  const [verificationContext, setVerificationContext] = useState<'login' | 'attendance'>('attendance');
 
   const [showRegularizationModal, setShowRegularizationModal] = useState(false);
   const [showShiftChangeModal, setShowShiftChangeModal] = useState(false);
   const [showOvertimeModal, setShowOvertimeModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [cameraDimensions, setCameraDimensions] = useState({ width: 640, height: 480 });
+  const [viewportHeight, setViewportHeight] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800));
+
+  const cameraAspectRatio = useMemo(() => {
+    const ratio = cameraDimensions.width / cameraDimensions.height;
+    return Number.isFinite(ratio) && ratio > 0 ? ratio : 4 / 5;
+  }, [cameraDimensions]);
+
+  const securityCoreViewStyle = useMemo<React.CSSProperties>(() => {
+    const maxHeight = Math.round(Math.max(320, viewportHeight * 0.75));
+    return {
+      aspectRatio: cameraAspectRatio,
+      maxHeight: `${maxHeight}px`
+    };
+  }, [cameraAspectRatio, viewportHeight]);
+
+  const handleCameraDimensions = useCallback((size: { width: number; height: number }) => {
+    setCameraDimensions(size);
+  }, []);
 
   useEffect(() => {
     const allEntries = attendanceService.getEntries();
@@ -88,6 +104,14 @@ const App: React.FC = () => {
     document.body.style.overflow = !session ? 'hidden' : 'auto';
     return () => { document.body.style.overflow = 'auto'; };
   }, [session]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setViewportHeight(window.innerHeight);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,15 +168,12 @@ const App: React.FC = () => {
 
       const remoteEntries = await attendanceService.fetchEntriesFromApi();
 
-      // Store pending login data and show verification modal
-      setPendingLoginData({
-        session: newSession,
-        entries: remoteEntries
-      });
-      setVerificationContext('login');
-      setFeedback(null); // Clear any previous errors before showing verification modal
-      setIsVerificationModalOpen(true);
-      setIsProcessing(false);
+      setSession(newSession);
+      setEntries(remoteEntries);
+      localStorage.setItem('secur_corp_attendance_ledger', JSON.stringify(remoteEntries));
+      localStorage.setItem('secur_corp_session', JSON.stringify(newSession));
+      setFeedback({ type: 'success', message: 'Login Successful', detail: 'Account verified.' });
+      setIsVerificationModalOpen(false);
     } catch (err: any) {
       let detail = err?.message || 'Authentication failed. Please try again.';
       
@@ -197,30 +218,8 @@ const App: React.FC = () => {
 
   const initiateAttendance = (capturedImage: string) => {
     setPendingCaptureData({ image: capturedImage });
-    setVerificationContext('attendance');
     setIsVerificationModalOpen(true);
   };
-
-  const completeLogin = useCallback(async (method: VerificationMethod) => {
-    if (!pendingLoginData) return;
-    
-    setIsVerificationModalOpen(false);
-    setIsProcessing(true);
-
-    try {
-      // Complete the login with session data
-      setSession(pendingLoginData.session);
-      setEntries(pendingLoginData.entries);
-      localStorage.setItem('secur_corp_attendance_ledger', JSON.stringify(pendingLoginData.entries));
-      localStorage.setItem('secur_corp_session', JSON.stringify(pendingLoginData.session));
-      setFeedback({ type: 'success', message: 'Login Successful', detail: `Verified with Windows Hello` });
-      setPendingLoginData(null);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Login Failed', detail: err.message || 'Failed to complete login' });
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [pendingLoginData]);
 
   const finalizeAttendance = useCallback(async (method: VerificationMethod) => {
     if (!session || !pendingCaptureData) return;
@@ -414,22 +413,11 @@ const App: React.FC = () => {
 
   if (!session) {
     return (
-      <Layout user={null} onLogout={() => {}}>
-        <VerificationModal
-          isOpen={isVerificationModalOpen}
-          onVerified={completeLogin}
-          onCancel={() => { 
-            setIsVerificationModalOpen(false); 
-            setPendingLoginData(null);
-            setIsProcessing(false);
-          }}
-          actionLabel="Login"
-          employeeId={pendingLoginData?.session?.employeeId}
-        />
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] animate-in fade-in zoom-in-95 duration-700">
-          <div className="max-w-4xl w-full p-6">
-            <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-[#9BA4B4] flex flex-col md:flex-row">
-              <div className="md:w-1/2 bg-[#14274E] p-8 text-white flex flex-col justify-between relative overflow-hidden">
+      <Layout user={null} onLogout={() => {}} isLoginStage>
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] px-4 sm:px-6 animate-in fade-in zoom-in-95 duration-700">
+          <div className="w-full max-w-3xl sm:max-w-4xl px-2 sm:px-4 md:px-6">
+            <div className="bg-white rounded-[1.75rem] sm:rounded-[2rem] shadow-2xl overflow-hidden border border-[#9BA4B4] flex flex-col md:flex-row">
+              <div className="md:w-1/2 bg-[#14274E] p-6 sm:p-8 text-white flex flex-col justify-between relative overflow-hidden">
                 <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-[#5C7BA6]/10 rounded-full blur-3xl"></div>
                 
@@ -437,7 +425,7 @@ const App: React.FC = () => {
                   <div className="bg-white/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md border border-white/20">
                     <i className="fas fa-shield-halved text-white text-3xl"></i>
                   </div>
-                  <h2 className="text-2xl font-black tracking-tight leading-tight mb-2">Vayu Puthra<br/>Secured Ecosystem</h2>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight mb-2">Vayu Puthra<br/>Secured Ecosystem</h2>
                 </div>
 
                 <div className="relative z-10 space-y-6">                  
@@ -450,9 +438,9 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="md:w-1/2 p-8 lg:p-10 flex flex-col justify-center">
-                <div className="mb-8 text-center md:text-left">
-                  <h3 className="text-xl font-extrabold text-[#14274E] tracking-tight">Identity Gateway</h3>
+              <div className="md:w-1/2 p-6 sm:p-8 lg:p-10 flex flex-col justify-center">
+                <div className="mb-6 sm:mb-8 text-center md:text-left">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-[#14274E] tracking-tight">Identity Gateway</h3>
                   <p className="text-[#394867] text-[9px] font-black uppercase tracking-[0.3em] mt-1">Authenticate Credentials</p>
                 </div>
 
@@ -483,7 +471,7 @@ const App: React.FC = () => {
                           value={employeeIdInput}
                           onChange={(e) => setEmployeeIdInput(e.target.value.toUpperCase())}
                           placeholder={selectedRole === UserRole.HR ? "EMP001" : "EMP002"}
-                          className="w-full pl-11 pr-5 py-3.5 bg-[#F1F6F9] border border-[#9BA4B4] rounded-xl focus:ring-4 focus:ring-[#14274E]/5 focus:border-[#14274E] focus:outline-none transition-all font-bold text-[#14274E] tracking-widest text-xs"
+                          className="w-full pl-11 pr-5 py-3 bg-[#F1F6F9] border border-[#9BA4B4] rounded-xl focus:ring-4 focus:ring-[#14274E]/5 focus:border-[#14274E] focus:outline-none transition-all font-bold text-[#14274E] tracking-widest text-xs"
                         />
                       </div>
                     </div>
@@ -497,7 +485,7 @@ const App: React.FC = () => {
                           value={passwordInput}
                           onChange={(e) => setPasswordInput(e.target.value)}
                           placeholder="Enter password"
-                          className="w-full pl-11 pr-5 py-3.5 bg-[#F1F6F9] border border-[#9BA4B4] rounded-xl focus:ring-4 focus:ring-[#14274E]/5 focus:border-[#14274E] focus:outline-none transition-all font-bold text-[#14274E] tracking-widest text-xs"
+                          className="w-full pl-11 pr-5 py-3 bg-[#F1F6F9] border border-[#9BA4B4] rounded-xl focus:ring-4 focus:ring-[#14274E]/5 focus:border-[#14274E] focus:outline-none transition-all font-bold text-[#14274E] tracking-widest text-xs"
                         />
                       </div>
                     </div>
@@ -516,7 +504,7 @@ const App: React.FC = () => {
                     )}
                     <button
                       type="submit"
-                      className="w-full bg-[#14274E] hover:bg-[#394867] text-white font-black py-4 rounded-xl shadow-lg shadow-[#14274E]/10 transition-all active:scale-95 text-[10px] tracking-[0.3em] uppercase flex items-center justify-center space-x-3"
+                      className="w-full bg-[#14274E] hover:bg-[#394867] text-white font-black py-3.5 sm:py-4 rounded-xl shadow-lg shadow-[#14274E]/10 transition-all active:scale-95 text-[10px] tracking-[0.3em] uppercase flex items-center justify-center space-x-3"
                     >
                       <span>Verify Account</span>
                       <i className="fas fa-arrow-right-long text-[9px]"></i>
@@ -536,25 +524,22 @@ const App: React.FC = () => {
       {session.role === UserRole.HR ? (
         <HRDashboard />
       ) : (
-        <div className="max-w-full mx-auto px-4 space-y-6 animate-in fade-in duration-500">
+        <div className="w-full mx-auto px-2 sm:px-4 space-y-6 animate-in fade-in duration-500">
           <VerificationModal
             isOpen={isVerificationModalOpen}
-            onVerified={verificationContext === 'login' ? completeLogin : finalizeAttendance}
+            onVerified={finalizeAttendance}
             onCancel={() => { 
               setIsVerificationModalOpen(false); 
               setPendingCaptureData(null);
-              if (verificationContext === 'login') {
-                setPendingLoginData(null);
-                setIsProcessing(false);
-              }
+              setIsProcessing(false);
             }}
-            actionLabel={verificationContext === 'login' ? 'Login' : (session.currentStatus === AttendanceStatus.CHECKED_IN ? 'Logout' : 'Login')}
-            employeeId={verificationContext === 'login' ? pendingLoginData?.session?.employeeId : session.employeeId}
+            actionLabel={session.currentStatus === AttendanceStatus.CHECKED_IN ? 'Logout' : 'Login'}
+            employeeId={session.employeeId}
           />
           
-          <div className="lg:flex h-full gap-6">
-            <div className="lg:w-1/3 flex flex-col gap-6">
-              <div className="bg-white rounded-3xl border border-[#9BA4B4] shadow-sm overflow-hidden flex-shrink-0">
+          <div className="flex flex-col gap-6 lg:flex-row">
+            <div className="w-full lg:w-1/3 flex flex-col gap-6">
+              <div className="bg-white rounded-3xl border border-[#9BA4B4] shadow-sm overflow-hidden flex-shrink-0 security-core-panel">
                 <div className="p-3 border-b border-[#F1F6F9] flex justify-between items-center bg-[#F8FAFC]">
                   <h2 className="font-black text-[#14274E] text-[10px] uppercase tracking-[0.2em] flex items-center">
                     <i className="fas fa-video text-[#14274E] mr-3"></i> Security Core
@@ -585,8 +570,15 @@ const App: React.FC = () => {
                         </div>
                   )}
 
-                  <div className="h-56 rounded-[2rem] overflow-hidden bg-slate-900 relative border border-slate-200 group shadow-inner">
-                     <CameraCapture onCapture={initiateAttendance} isProcessing={isProcessing} />
+                  <div
+                    className="security-core-view rounded-[2rem] overflow-hidden bg-slate-900 relative border border-slate-200 group shadow-inner"
+                    style={securityCoreViewStyle}
+                  >
+                     <CameraCapture
+                      onCapture={initiateAttendance}
+                      isProcessing={isProcessing}
+                      onDimensionsChange={handleCameraDimensions}
+                    />
                   </div>
                 </div>
               </div>
@@ -683,7 +675,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="lg:w-2/3 flex flex-col h-full space-y-6">
+            <div className="w-full lg:w-2/3 flex flex-col h-full space-y-6 min-w-0">
                 <AttendanceDashboard 
                   entries={entries.filter(e => e.employeeId === session.employeeId)} 
                   status={session.currentStatus} 
