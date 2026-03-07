@@ -7,6 +7,47 @@ import RegularizationModal from './RegularizationModal';
 import ShiftChangeModal from './ShiftChangeModal';
 import { generateId } from '../utils/id';
 
+const MAIN_TABS = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'attendanceRegister', label: 'Attendance Register' },
+  { key: 'settings', label: 'Environment' },
+  { key: 'holidays', label: 'Holidays' },
+  { key: 'teamApprovals', label: 'Team Approvals' },
+  { key: 'applyOnBehalf', label: 'Apply on behalf' },
+  { key: 'reports', label: 'Reports' }
+] as const;
+
+type MainTabKey = typeof MAIN_TABS[number]['key'];
+
+const REQUEST_TABS = [
+  { key: 'regularization', label: 'Regularization', shortLabel: 'Regularization' },
+  { key: 'shift', label: 'Shift', shortLabel: 'Shift' },
+  { key: 'overtime', label: 'Overtime', shortLabel: 'Overtime' },
+  { key: 'permission', label: 'Permission Hours', shortLabel: 'Permission Hrs' }
+] as const;
+
+type RequestTabKey = typeof REQUEST_TABS[number]['key'];
+
+const TEAM_APPROVAL_TABS = [
+  { key: 'regularization', label: 'Regularization' },
+  { key: 'shift', label: 'Shift Swap' },
+  { key: 'overtime', label: 'Overtime' },
+  { key: 'permission', label: 'Permission Hrs' }
+] as const;
+
+type TeamApprovalTabKey = typeof TEAM_APPROVAL_TABS[number]['key'];
+
+const REPORT_TABS = [
+  { key: 'summary', label: 'Summary', icon: 'fa-chart-pie' },
+  { key: 'attendance', label: 'Attendance', icon: 'fa-calendar-check' },
+  { key: 'misPunch', label: 'Mis-Punch', icon: 'fa-exclamation-triangle' },
+  { key: 'regularization', label: 'Regularization', icon: 'fa-file-contract' },
+  { key: 'shiftRequests', label: 'Shift Requests', icon: 'fa-clock-rotate-left' },
+  { key: 'teamReports', label: 'Team Reports', icon: 'fa-users' }
+] as const;
+
+type ReportTabKey = typeof REPORT_TABS[number]['key'];
+
 interface DashboardProps {
   entries: AttendanceEntry[];
   status: AttendanceStatus;
@@ -32,10 +73,10 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
   const [showShiftChangeModal, setShowShiftChangeModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   
-  const [activeMainTab, setActiveMainTab] = useState<'dashboard' | 'attendanceRegister' | 'settings' | 'holidays' | 'teamApprovals' | 'applyOnBehalf' | 'reports'>('dashboard');
-  const [activeReqTab, setActiveReqTab] = useState<'regularization' | 'shift' | 'overtime' | 'permission'>('regularization');
-  const [activeTeamApprovalTab, setActiveTeamApprovalTab] = useState<'regularization' | 'shift' | 'overtime' | 'permission'>('regularization');
-  const [activeApprovalReviewTab, setActiveApprovalReviewTab] = useState<'regularization' | 'shift' | 'overtime' | 'permission'>('regularization');
+  const [activeMainTab, setActiveMainTab] = useState<MainTabKey>('dashboard');
+  const [activeReqTab, setActiveReqTab] = useState<RequestTabKey>('regularization');
+  const [activeTeamApprovalTab, setActiveTeamApprovalTab] = useState<TeamApprovalTabKey>('regularization');
+  const [activeApprovalReviewTab, setActiveApprovalReviewTab] = useState<TeamApprovalTabKey>('regularization');
   const [activeStatisticsView, setActiveStatisticsView] = useState<'monthly' | 'ytd'>('monthly');
 
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -71,9 +112,7 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
   const [behalfOTEndTime, setBehalfOTEndTime] = useState('20:00');
   const [isSubmittingBehalf, setIsSubmittingBehalf] = useState(false);
 
-  const [activeEmployeeReport, setActiveEmployeeReport] = useState<
-    'summary' | 'attendance' | 'misPunch' | 'regularization' | 'shiftRequests' | 'teamReports'
-  >('summary');
+  const [activeEmployeeReport, setActiveEmployeeReport] = useState<ReportTabKey>('summary');
   
   const [reportType, setReportType] = useState<'daily' | 'range' | 'monthly'>('daily');
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1014,26 +1053,60 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
   }, []);
 
+  const monthStartOffset = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  const totalDaysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const desktopColStartClasses = [
+    '',
+    'sm:col-start-2',
+    'sm:col-start-3',
+    'sm:col-start-4',
+    'sm:col-start-5',
+    'sm:col-start-6',
+    'sm:col-start-7',
+  ];
+
   return (
-    <div className="py-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="py-6 dashboard-shell">
+      <div className="flex flex-wrap items-center gap-3 justify-between mb-6">
         <div className="text-lg font-bold text-[#14274E] uppercase tracking-widest">My Attendance</div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-8 bg-white p-4 rounded-2xl border border-[#9BA4B4] shadow-sm">
-        <button onClick={() => setActiveMainTab('dashboard')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'dashboard' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Dashboard</button>
-        <button onClick={() => setActiveMainTab('attendanceRegister')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'attendanceRegister' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Attendance Register</button>
-        <button onClick={() => setActiveMainTab('settings')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'settings' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Environment</button>
-        <button onClick={() => setActiveMainTab('holidays')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'holidays' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Holidays</button>
-        <button onClick={() => setActiveMainTab('teamApprovals')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'teamApprovals' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Team Approvals</button>
-        <button onClick={() => setActiveMainTab('applyOnBehalf')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'applyOnBehalf' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Apply on behalf</button>
-        <button onClick={() => setActiveMainTab('reports')} className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeMainTab === 'reports' ? 'bg-[#14274E] text-white shadow-lg scale-105' : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'}`}>Reports</button>
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-[#9BA4B4] shadow-sm mb-8 space-y-3 sm:space-y-0">
+        <div className="sm:hidden">
+          <select
+            aria-label="Select attendance section"
+            value={activeMainTab}
+            onChange={(e) => setActiveMainTab(e.target.value as MainTabKey)}
+            className="w-full border border-[#E5E7EB] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
+          >
+            {MAIN_TABS.map((tab) => (
+              <option key={tab.key} value={tab.key}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="hidden sm:flex gap-3 overflow-x-auto custom-scrollbar flex-nowrap md:flex-wrap">
+          {MAIN_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveMainTab(tab.key)}
+              className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                activeMainTab === tab.key
+                  ? 'bg-[#14274E] text-white shadow-lg scale-105'
+                  : 'bg-[#F8FAFC] text-[#394867] border border-[#E5E7EB] hover:bg-[#F1F6F9] hover:border-[#9BA4B4]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeMainTab === 'dashboard' && (
         <div className="space-y-6 animate-in fade-in pb-6">
           
-          <div className="bg-white p-6 rounded-2xl border border-[#9BA4B4] shadow-sm">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-[#9BA4B4] shadow-sm">
             {/* Switch and Date Picker Row */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#E5E7EB]">
               <div className="flex gap-2 bg-[#F1F6F9] p-1 rounded-lg border border-[#9BA4B4]">
@@ -1207,31 +1280,46 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="bg-white rounded-3xl border border-[#9BA4B4] shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-[#F1F6F9] flex items-center justify-between bg-[#F8FAFC]">
+              <div className="px-6 py-4 border-b border-[#F1F6F9] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-[#F8FAFC]">
                   <h3 className="font-bold text-[#14274E] uppercase tracking-widest text-xs">Activity Log</h3>
-                  <div className="flex bg-white rounded-lg p-1 border border-[#E2E8F0]">
-                        {['regularization', 'shift', 'overtime', 'permission'].map(tab => (
+                  <div className="w-full sm:w-auto">
+                    <select
+                      aria-label="Activity log request filter"
+                      value={activeReqTab}
+                      onChange={(e) => setActiveReqTab(e.target.value as RequestTabKey)}
+                      className="sm:hidden w-full border border-[#E2E8F0] rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
+                    >
+                      {REQUEST_TABS.map((tab) => (
+                        <option key={tab.key} value={tab.key}>
+                          {tab.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="hidden sm:flex bg-white rounded-lg p-1 border border-[#E2E8F0]">
+                        {REQUEST_TABS.map(tab => (
                           <button
-                              key={tab}
-                              onClick={() => setActiveReqTab(tab as any)}
-                              className={`px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${activeReqTab === tab ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
+                              key={tab.key}
+                              onClick={() => setActiveReqTab(tab.key)}
+                              className={`px-3 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${activeReqTab === tab.key ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
                           >
-                            {tab === 'permission' ? 'Permission Hrs' : tab}
+                            {tab.shortLabel}
                           </button>
                       ))}
+                    </div>
                   </div>
               </div>
               
               <div className="p-0">
                     {activeReqTab === 'regularization' && (
-                      <table className="w-full text-left">
-                          <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest">
+                      <div className="table-wrapper custom-scrollbar">
+                        <table className="app-table w-full text-left">
+                          <thead className="bg-[#F1F6F9] text-[8px] sm:text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest table-head-responsive">
                               <tr>
-                                  <th className="py-3 px-6">Applied Date</th>
-                                  <th className="py-3 px-6">Requested Date</th>
-                                  <th className="py-3 px-6">Details</th>
-                                  <th className="py-3 px-6">Reason</th>
-                                  <th className="py-3 px-6 text-right">Status</th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Applied Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Requested Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Details</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Reason</span></th>
+                                  <th className="py-3 px-6 text-right"><span className="table-head-label">Status</span></th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-[#F1F6F9]">
@@ -1257,18 +1345,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                                   <tr><td colSpan={5} className="py-8 text-center text-xs text-[#9BA4B4]">No regularization requests</td></tr>
                               )}
                           </tbody>
-                      </table>
+                        </table>
+                      </div>
                     )}
 
                     {activeReqTab === 'shift' && (
-                      <table className="w-full text-left">
-                          <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest">
+                      <div className="table-wrapper custom-scrollbar">
+                        <table className="app-table w-full text-left">
+                          <thead className="bg-[#F1F6F9] text-[8px] sm:text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest table-head-responsive">
                               <tr>
-                                  <th className="py-3 px-6">Applied Date</th>
-                                  <th className="py-3 px-6">Requested Date</th>
-                                  <th className="py-3 px-6">Details</th>
-                                  <th className="py-3 px-6">Reason</th>
-                                  <th className="py-3 px-6 text-right">Status</th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Applied Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Requested Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Details</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Reason</span></th>
+                                  <th className="py-3 px-6 text-right"><span className="table-head-label">Status</span></th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-[#F1F6F9]">
@@ -1292,18 +1382,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                                   <tr><td colSpan={5} className="py-8 text-center text-xs text-[#9BA4B4]">No shift change requests</td></tr>
                                 )}
                           </tbody>
-                      </table>
+                        </table>
+                      </div>
                     )}
 
                     {activeReqTab === 'permission' && (
-                      <table className="w-full text-left">
-                          <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest">
+                      <div className="table-wrapper custom-scrollbar">
+                        <table className="app-table w-full text-left">
+                          <thead className="bg-[#F1F6F9] text-[8px] sm:text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest table-head-responsive">
                               <tr>
-                                  <th className="py-3 px-6">Applied Date</th>
-                                  <th className="py-3 px-6">Requested Date</th>
-                                  <th className="py-3 px-6">Details</th>
-                                  <th className="py-3 px-6">Reason</th>
-                                  <th className="py-3 px-6 text-right">Status</th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Applied Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Requested Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Details</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Reason</span></th>
+                                  <th className="py-3 px-6 text-right"><span className="table-head-label">Status</span></th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-[#F1F6F9]">
@@ -1327,18 +1419,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                                   <tr><td colSpan={5} className="py-8 text-center text-xs text-[#9BA4B4]">No permission requests found</td></tr>
                               )}
                           </tbody>
-                      </table>
+                        </table>
+                      </div>
                     )}
 
                     {activeReqTab === 'overtime' && (
-                      <table className="w-full text-left">
-                          <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest">
+                      <div className="table-wrapper custom-scrollbar">
+                        <table className="app-table w-full text-left">
+                          <thead className="bg-[#F1F6F9] text-[8px] sm:text-[9px] font-bold text-[#9BA4B4] uppercase tracking-widest table-head-responsive">
                               <tr>
-                                  <th className="py-3 px-6">Applied Date</th>
-                                  <th className="py-3 px-6">Requested Date</th>
-                                  <th className="py-3 px-6">Details</th>
-                                  <th className="py-3 px-6">Reason</th>
-                                  <th className="py-3 px-6 text-right">Status</th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Applied Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Requested Date</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Details</span></th>
+                                  <th className="py-3 px-6"><span className="table-head-label">Reason</span></th>
+                                  <th className="py-3 px-6 text-right"><span className="table-head-label">Status</span></th>
                               </tr>
                           </thead>
                           <tbody className="divide-y divide-[#F1F6F9]">
@@ -1362,7 +1456,8 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                                   <tr><td colSpan={5} className="py-8 text-center text-xs text-[#9BA4B4]">No overtime requests found</td></tr>
                               )}
                           </tbody>
-                      </table>
+                        </table>
+                      </div>
                     )}
               </div>
           </div>
@@ -1370,29 +1465,31 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'attendanceRegister' && (
-        <div className="bg-white rounded-2xl border border-[#9BA4B4] shadow-sm overflow-hidden" style={{maxHeight: 'calc(100vh - 300px)'}}>
-          <div className="px-6 py-4 border-b border-[#F1F6F9] flex items-center justify-between bg-[#F8FAFC]">
-            <h3 className="font-black text-[#14274E] text-[10px] uppercase tracking-[0.3em]">
+        <div className="bg-white rounded-2xl border border-[#9BA4B4] shadow-sm overflow-hidden">
+          <div className="px-3 sm:px-6 py-2 sm:py-4 border-b border-[#F1F6F9] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-[#F8FAFC]">
+            <h3 className="font-black text-[#14274E] text-[9px] sm:text-[10px] uppercase tracking-[0.25em]">
               <i className="far fa-calendar-alt mr-3 text-[#9BA4B4]"></i> Attendance Register
             </h3>
-            <div className="flex bg-white shadow-sm border border-slate-200 rounded-2xl p-1.5 space-x-1">
+            <div className="flex bg-white shadow-sm border border-slate-200 rounded-2xl p-1 space-x-1 w-fit mx-auto sm:mx-0 text-xs">
               <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-50 text-[#394867] transition-all"><i className="fas fa-chevron-left text-[10px]"></i></button>
-              <span className="px-5 flex items-center text-[11px] font-black text-[#14274E] uppercase tracking-widest min-w-[140px] justify-center">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+              <span className="px-3 sm:px-5 flex items-center text-[10px] sm:text-[11px] font-black text-[#14274E] uppercase tracking-widest min-w-[110px] sm:min-w-[140px] justify-center text-center">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
               <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-50 text-[#394867] transition-all"><i className="fas fa-chevron-right text-[10px]"></i></button>
             </div>
           </div>
 
-          <div className="p-6 overflow-auto" style={{maxHeight: 'calc(100vh - 360px)'}}>
-            <div className="grid grid-cols-7 mb-3">
+          <div className="p-2 sm:p-5 overflow-auto">
+            <div className="grid grid-cols-7 mb-2">
               {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
-                <div key={d} className="text-[9px] font-black text-[#9BA4B4] text-center uppercase tracking-[0.2em] py-2">{d}</div>
+                <div key={d} className="text-[7px] sm:text-[9px] font-black text-[#9BA4B4] text-center uppercase tracking-[0.1em] py-1 sm:py-2">{d}</div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-2 auto-rows-fr">
-              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => <div key={`empty-${i}`} className="opacity-0 pointer-events-none" />)}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 auto-rows-fr">
+              {Array.from({ length: monthStartOffset }).map((_, i) => (
+                <div key={`empty-${i}`} className="opacity-0 pointer-events-none sm:hidden" />
+              ))}
               
-              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+              {Array.from({ length: totalDaysInMonth }).map((_, i) => {
                 const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1);
                 const offsetDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
                 const dateStr = offsetDate.toISOString().split('T')[0];
@@ -1421,34 +1518,35 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                 let borderClass = "border-slate-100";
                 let textClass = "text-[#394867]";
                 let statusElement = null;
+                const desktopColStartClass = i === 0 ? desktopColStartClasses[monthStartOffset] : '';
 
                 // Re-ordered logic: Work > Week Off > Today > Absence
                 if (dayEntries.length > 0) {
                   bgClass = "bg-emerald-50"; borderClass = "border-emerald-100"; textClass = "text-emerald-700";
                 } else if (isWeekOff) {
                   bgClass = "bg-slate-50"; borderClass = "border-slate-100"; textClass = "text-slate-400";
-                  statusElement = <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Week Off</span>;
+                  statusElement = <span className="text-[6px] sm:text-[8px] font-black text-slate-400 uppercase tracking-tighter">Week Off</span>;
                 } else if (isToday) {
                   if (isWorkingHoursOver) {
                     bgClass = "bg-rose-50"; borderClass = "border-rose-100"; textClass = "text-rose-700";
-                    statusElement = <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absent</span>;
+                    statusElement = <span className="text-[6px] sm:text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absent</span>;
                   } else {
                     bgClass = "bg-[#14274E]"; borderClass = "border-[#14274E]"; textClass = "text-white";
-                    statusElement = <span className="text-[8px] font-black text-white/40 uppercase tracking-tighter">Current</span>;
+                    statusElement = <span className="text-[6px] sm:text-[8px] font-black text-white/40 uppercase tracking-tighter">Current</span>;
                   }
                 } else if (!isFuture) {
                   bgClass = "bg-rose-50"; borderClass = "border-rose-100"; textClass = "text-rose-700";
-                  statusElement = <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absence</span>;
+                  statusElement = <span className="text-[5.5px] sm:text-[8px] font-black text-rose-400 uppercase tracking-tighter">Absent</span>;
                 }
 
                 return (
                   <div 
                     key={i} 
                     onClick={() => !isFuture && (setSelectedDate(dateStr), setShowRegularizationModal(true))}
-                    className={`min-h-[64px] border-2 rounded-2xl p-2 flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-95 ${bgClass} ${borderClass}`}
+                    className={`min-h-[36px] sm:min-h-[64px] border-2 rounded-xl sm:rounded-2xl p-1 sm:p-2 flex flex-col justify-between transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-95 ${desktopColStartClass} ${bgClass} ${borderClass}`}
                   >
                     <div className="flex justify-between items-start">
-                      <span className={`text-[11px] font-black ${textClass}`}>{i + 1}</span>
+                      <span className={`text-[7px] sm:text-[11px] font-black ${textClass}`}>{i + 1}</span>
                       {!isFuture && !isToday && dayEntries.length === 0 && !isWeekOff && (
                         <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center animate-pulse">
                           <i className="fas fa-clock-rotate-left text-[9px]"></i>
@@ -1458,19 +1556,19 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                     </div>
                     
                     {dayEntries.length > 0 ? (
-                      <div className="space-y-1 mt-1">
-                        <div className="flex justify-between items-center text-[8px] font-black opacity-60">
+                      <div className="space-y-0.5 sm:space-y-1 mt-0.5 sm:mt-1">
+                        <div className="flex justify-between items-center text-[5px] sm:text-[8px] font-black opacity-60">
                           <span>IN</span>
                           <span>{new Date(checkIn?.timestamp!).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!1})}</span>
                         </div>
-                        <div className="flex justify-between items-center text-[8px] font-black opacity-60">
+                        <div className="flex justify-between items-center text-[5px] sm:text-[8px] font-black opacity-60">
                           <span>OUT</span>
                           <span>{checkOut ? new Date(checkOut.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!1}) : '--:--'}</span>
                         </div>
                         {totalHours > 0 && (
-                          <div className="pt-1 mt-1 border-t border-black/5 flex justify-between items-center">
-                            <span className="text-[7px] font-black uppercase text-[#9BA4B4]">Span</span>
-                            <span className="text-[9px] font-black text-emerald-700">{totalHours}h</span>
+                          <div className="pt-0.5 mt-0.5 sm:pt-1 sm:mt-1 border-t border-black/5 flex justify-between items-center">
+                            <span className="text-[5px] sm:text-[7px] font-black uppercase text-[#9BA4B4]">Span</span>
+                            <span className="text-[7px] sm:text-[9px] font-black text-emerald-700">{totalHours}h</span>
                           </div>
                         )}
                       </div>
@@ -1488,7 +1586,7 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'settings' && (
-         <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
             <div className="max-w-4xl mx-auto">
                <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest mb-8 text-center">Work Environment Configuration</h3>
                
@@ -1517,7 +1615,7 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'holidays' && (
-        <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-[#9BA4B4] shadow-sm animate-in fade-in">
           <div className="max-w-5xl mx-auto">
             <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest mb-8 text-center">Annual Holiday Schedule</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1548,44 +1646,51 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'teamApprovals' && (
-        <div className="space-y-6 animate-in fade-in pb-6">
-          <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm">
-             <div className="flex items-center justify-between mb-8 border-b border-[#F1F6F9] pb-5">
+         <div className="space-y-6 animate-in fade-in pb-6">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-[#9BA4B4] shadow-sm">
+             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8 border-b border-[#F1F6F9] pb-5">
                 <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest">
                     <i className="fas fa-user-check mr-2 text-[#9BA4B4]"></i> Team Approvals Gateway
                 </h3>
-                <div className="flex bg-[#F1F6F9] rounded-xl p-1 border border-[#E2E8F0] space-x-1">
-                    {[
-                      { id: 'regularization', label: 'Regularization' },
-                      { id: 'shift', label: 'Shift Swap' },
-                      { id: 'overtime', label: 'Overtime' },
-                      { id: 'permission', label: 'Permission Hrs' }
-                    ].map(tab => (
+                <div className="w-full sm:w-auto">
+                  <select
+                    aria-label="Select approval type"
+                    value={activeApprovalReviewTab}
+                    onChange={(e) => setActiveApprovalReviewTab(e.target.value as TeamApprovalTabKey)}
+                    className="sm:hidden w-full border border-[#E2E8F0] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
+                  >
+                    {TEAM_APPROVAL_TABS.map((tab) => (
+                      <option key={tab.key} value={tab.key}>{tab.label}</option>
+                    ))}
+                  </select>
+                  <div className="hidden sm:flex bg-[#F1F6F9] rounded-xl p-1 border border-[#E2E8F0] space-x-1 overflow-x-auto custom-scrollbar flex-nowrap">
+                    {TEAM_APPROVAL_TABS.map(tab => (
                         <button
-                            key={tab.id}
-                            onClick={() => setActiveApprovalReviewTab(tab.id as any)}
-                            className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeApprovalReviewTab === tab.id ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
+                          key={tab.key}
+                          onClick={() => setActiveApprovalReviewTab(tab.key)}
+                          className={`flex-shrink-0 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeApprovalReviewTab === tab.key ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
                         >
                             {tab.label}
                         </button>
                     ))}
+                  </div>
                 </div>
              </div>
 
              {/* Regularization Approvals */}
              {activeApprovalReviewTab === 'regularization' && (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+               <div className="team-approvals-table-wrapper overflow-x-auto">
+                 <table className="app-table team-approvals-table w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest table-head-responsive">
                      <tr>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Type</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Req Login</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Req Logout</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Reason</th>
-                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Type</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Req Login</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Req Logout</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Reason</span></th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center"><span className="table-head-label">Action</span></th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-[#F1F6F9]">
@@ -1616,17 +1721,17 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
 
              {/* Shift Swap Approvals */}
              {activeApprovalReviewTab === 'shift' && (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+               <div className="team-approvals-table-wrapper overflow-x-auto">
+                 <table className="app-table team-approvals-table w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest table-head-responsive">
                      <tr>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Current Shift</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Requested Shift</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Reason</th>
-                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Current Shift</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested Shift</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Reason</span></th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center"><span className="table-head-label">Action</span></th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-[#F1F6F9]">
@@ -1656,16 +1761,16 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
 
              {/* Overtime Approvals */}
              {activeApprovalReviewTab === 'overtime' && (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+               <div className="team-approvals-table-wrapper overflow-x-auto">
+                 <table className="app-table team-approvals-table w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest table-head-responsive">
                      <tr>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Work Date</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Requested Hours</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Justification</th>
-                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Work Date</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested Hours</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Justification</span></th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center"><span className="table-head-label">Action</span></th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-[#F1F6F9]">
@@ -1694,17 +1799,17 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
 
              {/* Permission Hours Approvals */}
              {activeApprovalReviewTab === 'permission' && (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
-                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest">
+               <div className="team-approvals-table-wrapper overflow-x-auto">
+                 <table className="app-table team-approvals-table w-full text-left border border-[#9BA4B4] rounded-xl overflow-hidden">
+                   <thead className="bg-[#F1F6F9] text-[9px] font-bold text-[#394867] uppercase tracking-widest table-head-responsive">
                      <tr>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Name</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Date</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Start Time</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">End Time</th>
-                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]">Purpose</th>
-                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center">Action</th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Name</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Start Time</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">End Time</span></th>
+                       <th className="py-3 px-4 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Purpose</span></th>
+                       <th className="py-3 px-4 border-b border-[#9BA4B4] text-center"><span className="table-head-label">Action</span></th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-[#F1F6F9]">
@@ -1737,22 +1842,17 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
 
       {activeMainTab === 'applyOnBehalf' && (
         <div className="space-y-6 animate-in fade-in pb-6">
-          <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-[#9BA4B4] shadow-sm">
              <div className="flex items-center justify-between mb-8 border-b border-[#F1F6F9] pb-5">
                 <h3 className="text-sm font-bold text-[#14274E] uppercase tracking-widest">
                     <i className="fas fa-user-plus mr-2 text-[#9BA4B4]"></i> Application on Behalf
                 </h3>
-                <div className="flex bg-[#F1F6F9] rounded-xl p-1 border border-[#E2E8F0] space-x-1">
-                    {[
-                      { id: 'regularization', label: 'Regularization' },
-                      { id: 'shift', label: 'Shift Swap' },
-                      { id: 'overtime', label: 'Overtime' },
-                      { id: 'permission', label: 'Permission Hrs' }
-                    ].map(tab => (
+                <div className="flex bg-[#F1F6F9] rounded-xl p-1 border border-[#E2E8F0] space-x-1 overflow-x-auto custom-scrollbar flex-nowrap">
+                    {TEAM_APPROVAL_TABS.map(tab => (
                         <button
-                            key={tab.id}
-                            onClick={() => setActiveTeamApprovalTab(tab.id as any)}
-                            className={`px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeTeamApprovalTab === tab.id ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
+                          key={tab.key}
+                          onClick={() => setActiveTeamApprovalTab(tab.key)}
+                          className={`flex-shrink-0 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${activeTeamApprovalTab === tab.key ? 'bg-[#14274E] text-white shadow-sm' : 'text-[#9BA4B4] hover:text-[#14274E]'}`}
                         >
                             {tab.label}
                         </button>
@@ -1906,28 +2006,35 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
       )}
 
       {activeMainTab === 'reports' && (
-      <div className="space-y-6 animate-in fade-in pb-6">
-        <div className="bg-white rounded-2xl p-8 border border-[#9BA4B4] shadow-sm">
-        <div className="flex space-x-2 border-b border-[#E5E7EB] px-3 mb-6 overflow-x-auto">
-          {[
-            { id: 'summary', label: 'Summary', icon: 'fa-chart-pie' },
-            { id: 'attendance', label: 'Attendance', icon: 'fa-calendar-check' },
-            { id: 'misPunch', label: 'Mis-Punch', icon: 'fa-exclamation-triangle' },
-            { id: 'regularization', label: 'Regularization', icon: 'fa-file-contract' },
-            { id: 'shiftRequests', label: 'Shift Requests', icon: 'fa-clock-rotate-left' },
-            { id: 'teamReports', label: 'Team Reports', icon: 'fa-users' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveEmployeeReport(tab.id as any)}
-              className={`pb-3 px-4 font-bold text-[10px] uppercase tracking-widest transition-all border-b-2 flex items-center space-x-2 whitespace-nowrap ${
-                activeEmployeeReport === tab.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6] hover:border-[#9BA4B4]'
-              }`}
+        <div className="space-y-6 animate-in fade-in pb-6">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-[#9BA4B4] shadow-sm">
+        <div className="border-b border-[#E5E7EB] mb-6 pb-3 space-y-3 sm:space-y-0">
+          <div className="sm:hidden px-1">
+            <select
+              aria-label="Select report view"
+              value={activeEmployeeReport}
+              onChange={(e) => setActiveEmployeeReport(e.target.value as ReportTabKey)}
+              className="w-full border border-[#E5E7EB] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
             >
-              <i className={`fas ${tab.icon}`}></i>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+              {REPORT_TABS.map((tab) => (
+                <option key={tab.key} value={tab.key}>{tab.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="hidden sm:flex space-x-2 overflow-x-auto px-3">
+            {REPORT_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveEmployeeReport(tab.key)}
+                className={`pb-3 px-4 font-bold text-[10px] uppercase tracking-widest transition-all border-b-2 flex items-center space-x-2 whitespace-nowrap ${
+                  activeEmployeeReport === tab.key ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6] hover:border-[#9BA4B4]'
+                }`}
+              >
+                <i className={`fas ${tab.icon}`}></i>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeEmployeeReport === 'summary' && (
@@ -2119,19 +2226,19 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                 )}
               </div>
               
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                  <thead>
+              <div className="report-table-wrapper overflow-x-auto custom-scrollbar">
+                <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                  <thead className="table-head-responsive">
                     <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Shift</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout Time</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Late Arrival</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Early Going</th>
-                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Total Hours</th>
-                      <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Shift</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Late Arrival</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Early Going</span></th>
+                      <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Total Hours</span></th>
+                      <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2308,18 +2415,18 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
               )}
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+            <div className="report-table-wrapper overflow-x-auto custom-scrollbar">
+              <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Status</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Approved Date</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2487,20 +2594,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
               )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+            <div className="report-table-wrapper overflow-x-auto custom-scrollbar">
+              <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Type</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested In</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested Out</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Remarks</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approved Date</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Type</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested In</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested Out</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Remarks</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2633,20 +2740,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
               )}
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+            <div className="report-table-wrapper overflow-x-auto custom-scrollbar">
+              <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested ID</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">assigned_Shift</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Shift_Requested_To</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Remarks</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approved Date</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested ID</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">assigned_Shift</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Shift_Requested_To</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Remarks</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2889,22 +2996,22 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                   <p className="text-xs font-bold text-[#394867]">Loading team data...</p>
                 </div>
               ) : (
-                  <div className="overflow-x-auto">
+                  <div className="report-table-wrapper overflow-x-auto custom-scrollbar">
                     {teamReportType === 'attendance' && (
-                        <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                            <thead>
+                        <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                          <thead className="table-head-responsive">
                                 <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp Name</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Shift</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout Time</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Late Arrival</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Early Going</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Total Hours</th>
-                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp Name</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Shift</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Late Arrival</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Early Going</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Total Hours</span></th>
+                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2941,20 +3048,20 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                         </table>
                     )}
                     
-                     {teamReportType === 'misPunch' && (
-                        <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                            <thead>
+                    {teamReportType === 'misPunch' && (
+                      <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                          <thead className="table-head-responsive">
                                 <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp Name</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout Time</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Status</th>
-                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Approved Date</th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp Name</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
+                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2989,22 +3096,22 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                         </table>
                     )}
                     
-                     {teamReportType === 'regularization' && (
-                        <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                            <thead>
+                    {teamReportType === 'regularization' && (
+                      <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                          <thead className="table-head-responsive">
                                 <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp Name</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Type</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested In</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested Out</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Remarks</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approved Date</th>
-                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp Name</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Type</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested In</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested Out</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Remarks</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
+                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -3042,21 +3149,21 @@ const AttendanceDashboard: React.FC<DashboardProps> = ({
                     )}
                     
                     {teamReportType === 'shiftRequests' && (
-                        <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                            <thead>
+                      <table className="app-table report-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                          <thead className="table-head-responsive">
                                 <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Requested ID</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp Name</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">assigned_Shift</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Shift_Requested_To</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied Date</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Applied By</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Remarks</th>
-                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approved Date</th>
-                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Requested ID</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp Name</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">assigned_Shift</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Shift_Requested_To</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied Date</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Applied By</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Remarks</span></th>
+                                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approved Date</span></th>
+                                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                                 </tr>
                             </thead>
                             <tbody>
