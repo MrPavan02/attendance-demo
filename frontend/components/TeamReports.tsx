@@ -4,10 +4,17 @@ import { MOCK_EMPLOYEES } from '../services/attendanceService';
 import { attendanceService } from '../services/attendanceService';
 import { adminService } from '../services/adminService';
 
+const TEAM_REPORT_TABS = [
+  { id: 'attendance', label: 'Attendance', icon: 'fa-users' },
+  { id: 'misPunch', label: 'Mis-Punch', icon: 'fa-exclamation-triangle' },
+  { id: 'regularization', label: 'Regularization', icon: 'fa-file-contract' },
+  { id: 'teamShiftReport', label: 'Shift List', icon: 'fa-calendar-days' }
+] as const;
+
+type TeamReportTabId = typeof TEAM_REPORT_TABS[number]['id'];
+
 const TeamReports: React.FC = () => {
-  const [activeTeamReport, setActiveTeamReport] = useState<
-    'attendance' | 'misPunch' | 'regularization' | 'teamShiftReport'
-  >('attendance');
+  const [activeTeamReport, setActiveTeamReport] = useState<TeamReportTabId>('attendance');
   
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [reportType, setReportType] = useState<'daily' | 'range' | 'monthly'>('daily');
@@ -278,24 +285,35 @@ const TeamReports: React.FC = () => {
       <div className="bg-white rounded-xl p-4 shadow-sm border border-[#9BA4B4]">
         <h3 className="text-sm font-bold text-[#14274E] mb-3 tracking-tight">Team Reports</h3>
         
-        <div className="flex space-x-4 border-b border-[#9BA4B4] px-1 mb-4 overflow-x-auto">
-          {[
-            { id: 'attendance', label: 'Attendance', icon: 'fa-users' },
-            { id: 'misPunch', label: 'Mis-Punch', icon: 'fa-exclamation-triangle' },
-            { id: 'regularization', label: 'Regularization', icon: 'fa-file-contract' },
-            { id: 'teamShiftReport', label: 'Shift List', icon: 'fa-calendar-days' }
-          ].map(report => (
-            <button
-              key={report.id}
-              onClick={() => setActiveTeamReport(report.id as any)}
-              className={`pb-2 px-2 font-bold text-xs uppercase tracking-[0.15em] transition-all border-b-2 flex items-center space-x-1.5 whitespace-nowrap ${
-                activeTeamReport === report.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
-              }`}
+        <div className="border-b border-[#9BA4B4] px-1 mb-4 space-y-2 sm:space-y-0">
+          <div className="sm:hidden">
+            <select
+              aria-label="Select team report"
+              value={activeTeamReport}
+              onChange={(e) => setActiveTeamReport(e.target.value as TeamReportTabId)}
+              className="w-full border border-[#E2E8F0] rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#14274E] bg-white focus:outline-none focus:ring-2 focus:ring-[#14274E]/20"
             >
-              <i className={`fas ${report.icon}`}></i>
-              <span>{report.label}</span>
-            </button>
-          ))}
+              {TEAM_REPORT_TABS.map((report) => (
+                <option key={report.id} value={report.id}>
+                  {report.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="hidden sm:flex space-x-4 overflow-x-auto">
+            {TEAM_REPORT_TABS.map((report) => (
+              <button
+                key={report.id}
+                onClick={() => setActiveTeamReport(report.id)}
+                className={`pb-2 px-2 font-bold text-xs uppercase tracking-[0.15em] transition-all border-b-2 flex items-center space-x-1.5 whitespace-nowrap ${
+                  activeTeamReport === report.id ? 'text-[#14274E] border-[#14274E]' : 'text-[#394867] border-transparent hover:text-[#5C7BA6]'
+                }`}
+              >
+                <i className={`fas ${report.icon}`}></i>
+                <span>{report.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -426,19 +444,19 @@ const TeamReports: React.FC = () => {
         ) : teamData.length > 0 ? (
           <div className="overflow-x-auto">
             {activeTeamReport === 'attendance' && (
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+              <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp Name</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Shift</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Late Coming</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Early Going</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Status</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp Name</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Shift</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Late Coming</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Early Going</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Status</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -495,16 +513,16 @@ const TeamReports: React.FC = () => {
             )}
 
             {activeTeamReport === 'misPunch' && (
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+              <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Employee Id</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Employee Name</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Location</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Logout Time</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Employee Id</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Employee Name</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Location</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -536,19 +554,19 @@ const TeamReports: React.FC = () => {
             )}
 
             {activeTeamReport === 'regularization' && (
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+              <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Employee Id</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Employee Name</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Location</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Login Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Logout Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Regularize Time</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Approve/Reject</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Remarks</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Employee Id</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Employee Name</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Location</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Login Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Logout Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Regularize Time</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Approve/Reject</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Remarks</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -596,16 +614,16 @@ const TeamReports: React.FC = () => {
             )}
 
             {activeTeamReport === 'teamShiftReport' && (
-              <table className="w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
-                <thead>
+              <table className="app-table w-full text-left border border-[#9BA4B4] rounded-lg overflow-hidden">
+                <thead className="table-head-responsive">
                   <tr className="text-[10px] font-bold uppercase text-[#14274E] tracking-widest bg-[#D6E4F0]">
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">S.no</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Date</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp ID</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Emp Name</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Dept</th>
-                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]">Assigned Shift</th>
-                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]">Timings</th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">S.no</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Date</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp ID</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Emp Name</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Dept</span></th>
+                    <th className="py-1.5 px-3 border-r border-b border-[#9BA4B4]"><span className="table-head-label">Assigned Shift</span></th>
+                    <th className="py-1.5 px-3 border-b border-[#9BA4B4]"><span className="table-head-label">Timings</span></th>
                   </tr>
                 </thead>
                 <tbody>
