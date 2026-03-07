@@ -5,9 +5,10 @@ interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
   isProcessing: boolean;
   onDimensionsChange?: (size: { width: number; height: number }) => void;
+  isMobileViewport?: boolean;
 }
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing, onDimensionsChange }) => {
+const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing, onDimensionsChange, isMobileViewport = false }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -66,10 +67,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing, 
     }
   }, [onCapture, videoSize]);
 
+  const normalizedAspectRatio = Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : undefined;
+  const containerStyle: React.CSSProperties = isMobileViewport
+    ? { height: '100%', width: '100%', minHeight: '100%' }
+    : { aspectRatio: normalizedAspectRatio };
+  const videoStyle: React.CSSProperties = isMobileViewport
+    ? { height: '100%', width: '100%' }
+    : { aspectRatio: normalizedAspectRatio };
+
   return (
     <div 
       className="relative w-full bg-[#F1F6F9] rounded-2xl overflow-hidden border border-[#9BA4B4] shadow-sm group"
-      style={{ aspectRatio: Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : undefined }}
+      style={containerStyle}
     >
       {error ? (
         <div className="flex flex-col items-center justify-center h-full text-[#394867] p-8 text-center">
@@ -84,7 +93,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, isProcessing, 
             autoPlay 
             playsInline 
             className="w-full h-full object-cover scale-x-[-1]"
-            style={{ aspectRatio: Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : undefined }}
+            style={videoStyle}
           />
           <canvas ref={canvasRef} width="640" height="480" className="hidden" />
           
